@@ -1,14 +1,16 @@
 use axum::{
+    extract::ws::{Message, WebSocket, WebSocketUpgrade},
     extract::State,
     http::StatusCode,
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
-use std::net::SocketAddr;
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use tokio::sync::{mpsc, RwLock};
 
 #[derive(Debug, Deserialize, Serialize)]
 struct WebDevice {
@@ -33,7 +35,8 @@ async fn main() {
     let app = Router::new()
         // `GET /` goes to `root`
         .route("/", get(root))
-        .route("/web_devices", get(web_devices).with_state(pool));
+        .route("/web_devices", get(web_devices).with_state(pool))
+        .route("/ws", get(handler));
 
     // `POST /users` goes to `create_user`
     //.route("/users", post(create_user));
@@ -64,4 +67,30 @@ async fn web_devices(State(pool): State<Pool<Postgres>>) -> String {
 
     serde_json::to_string(&web_devices)
         .unwrap_or_else(|_| json!({"error":"Не удалось получть данные"}).to_string())
+}
+
+//ws
+async fn handler(ws: WebSocketUpgrade) -> Response {
+    ws.on_upgrade(handle_socket)
+}
+
+static NEXT_USERID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
+
+async fn handle_socket(mut socket: WebSocket) {
+    let my_id = NEXT_USERID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    println!("Welcome User {}", my_id);
+
+    while let Some(msg) = socket.recv().await {
+        let msg = if let Ok(msg) = msg {
+            format!("{} + text", msg.into_text().unwrap())
+        } else {
+            // client disconnected
+            return;
+        };
+
+        if socket.send(Message::Text(msg)).await.is_err() {
+            // client disconnected
+            return;
+        }
+    }
 }
