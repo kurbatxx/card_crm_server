@@ -8,8 +8,11 @@ edition = "2021"
 [dependencies]
 axum = { version = "0.6.4", features = ["ws"] }
 tokio = { version = "1.25.0", features = ["rt-multi-thread", "macros"] }
+tokio-stream = "0.1.11"
+futures = "0.3.26"
+
 serde = { version = "1.0.152", features = ["derive"] }
-serde_json = "*"
+serde_json = "1.0.92"
 sqlx = { version = "0.6", features = [
     "postgres",
     "macros",
