@@ -1,3 +1,6 @@
+#[path = "api/db_api.rs"]
+mod db_api;
+
 use axum::{
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
     extract::State,
@@ -7,8 +10,6 @@ use axum::{
     Json, Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
-use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tokio::sync::{mpsc, RwLock};
@@ -16,15 +17,6 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 
 static NEXT_USERID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
 type Users = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Result<Message, axum::Error>>>>>;
-
-#[derive(Debug, Deserialize, Serialize)]
-struct WebDevice {
-    web_device_id: i32,
-    web_device_name: String,
-    visible: bool,
-    colored: bool,
-    icon: Option<String>,
-}
 
 #[tokio::main]
 async fn main() {
@@ -42,7 +34,7 @@ async fn main() {
     let app = Router::new()
         // `GET /` goes to `root`
         .route("/", get(root))
-        .route("/web_devices", get(web_devices).with_state(pool))
+        .route("/web_devices", get(db_api::web_devices).with_state(pool))
         .route("/ws", get(handler).with_state(users));
 
     // `POST /users` goes to `create_user`
@@ -59,21 +51,7 @@ async fn main() {
 }
 
 async fn root() -> &'static str {
-    "Hello, World!"
-}
-
-async fn web_devices(State(pool): State<Pool<Postgres>>) -> String {
-    let web_devices = sqlx::query_as!(
-        WebDevice,
-        r#"SELECT web_device_id, web_device_name, visible, colored, icon FROM web_device"#
-    )
-    .fetch_all(&pool)
-    .await
-    .unwrap();
-    dbg!(&web_devices);
-
-    serde_json::to_string(&web_devices)
-        .unwrap_or_else(|_| json!({"error":"Не удалось получть данные"}).to_string())
+    "It works"
 }
 
 //ws
@@ -96,7 +74,17 @@ async fn handle_socket(socket: WebSocket, users: Users) {
     while let Some(msg) = receiver.next().await {
         let msg = if let Ok(msg) = msg {
             dbg!(&msg);
-            format!("{} + text", msg.into_text().unwrap())
+
+            match msg {
+                Message::Text(_) => {
+                    format!("{} + text", msg.into_text().unwrap())
+                }
+                Message::Close(_) => {
+                    disconnect(my_id, &users).await;
+                    return;
+                }
+                _ => return,
+            }
         } else {
             disconnect(my_id, &users).await;
             // client disconnected
