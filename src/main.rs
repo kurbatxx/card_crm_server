@@ -1,16 +1,18 @@
 #[path = "api/db_api.rs"]
 mod db_api;
 
+#[path = "api/web_api.rs"]
+mod web_api;
+
 use axum::{
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
     extract::State,
-    http::StatusCode,
-    response::{IntoResponse, Response},
+    response::Response,
     routing::{get, post},
-    Json, Router,
+    Router,
 };
-use futures::{sink::SinkExt, stream::StreamExt};
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use futures::stream::StreamExt;
+use sqlx::{postgres::PgPoolOptions};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -32,18 +34,14 @@ async fn main() {
 
     // build our application with a route
     let app = Router::new()
-        // `GET /` goes to `root`
         .route("/", get(root))
         .route("/web_devices", get(db_api::web_devices).with_state(pool))
+        .route("/login", post(web_api::login))
         .route("/ws", get(handler).with_state(users));
 
-    // `POST /users` goes to `create_user`
-    //.route("/users", post(create_user));
-
-    // run our app with hyper
     // `axum::Server` is a re-export of `hyper::Server`
     let addr = SocketAddr::from(([127, 0, 0, 1], 3333));
-
+    println!("Run on {}", &addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await

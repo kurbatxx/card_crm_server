@@ -7,6 +7,9 @@ GET {{server_url}} HTTP/1.1
 GET {{server_url}}/web_devices HTTP/1.1
 
 ###
+POST {{server_url}}/login?login=login&password=password HTTP/1.1
+
+###
 web_devices
 POST https://example.com/comments HTTP/1.1
 content-type: application/json
