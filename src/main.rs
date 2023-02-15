@@ -12,10 +12,18 @@ use axum::{
     Router,
 };
 use futures::stream::StreamExt;
-use sqlx::{postgres::PgPoolOptions};
+use sqlx::postgres::PgPoolOptions;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{mpsc, Mutex, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use web_api::WebClient;
+
+use once_cell::sync::Lazy;
+
+static CLIENTS: Lazy<Mutex<HashMap<String, WebClient>>> = Lazy::new(|| {
+    let mut m = HashMap::new();
+    Mutex::new(m)
+});
 
 static NEXT_USERID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
 type Users = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Result<Message, axum::Error>>>>>;
@@ -23,6 +31,10 @@ type Users = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Result<Message, axu
 #[tokio::main]
 async fn main() {
     let users = Users::default();
+    // CLIENTS.get_or_init(|| {
+    //     let mut m = HashMap::new();
+    //     m
+    // });
 
     let db_url = dotenvy::var("DATABASE_URL").unwrap();
 
