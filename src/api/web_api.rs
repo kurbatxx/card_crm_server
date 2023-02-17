@@ -10,17 +10,6 @@ use crate::CLIENTS;
 const SITE_URL: &str = "https://bilim.integro.kz:8181/processor/back-office/index.faces";
 const AUTH_URL: &str = "https://bilim.integro.kz:8181/processor/back-office/j_security_check";
 
-// static CLIENT_INSTANCE: Lazy<reqwest::Client> = Lazy::new(|| {
-//     println!("INIT_CLIENT");
-//     reqwest::Client::builder()
-//         .use_native_tls()
-//         .max_tls_version(tls::Version::TLS_1_1)
-//         .cookie_store(true)
-//         .danger_accept_invalid_certs(true)
-//         .build()
-//         .unwrap()
-// });
-
 #[derive(Deserialize)]
 pub struct AccessData {
     pub login: String,
@@ -35,6 +24,8 @@ pub struct WebClient {
 
 pub async fn login(extract::Json(payload): extract::Json<AccessData>) -> String {
     let web_client = create_client_or_send_exist(&payload.login).await;
+    dbg!(&web_client);
+
     let client = web_client.client;
     let _ = client.get(SITE_URL).send().await.unwrap();
 
@@ -84,5 +75,5 @@ async fn create_client_or_send_exist(name: &str) -> WebClient {
             cookie: "".to_string(),
             password: "".to_string(),
         })
-        .clone()
+        .to_owned()
 }
