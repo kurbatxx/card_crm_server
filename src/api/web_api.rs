@@ -1,10 +1,15 @@
-use axum::{debug_handler, extract, Extension};
+use axum::{
+    debug_handler,
+    extract::{self, Query},
+    Extension,
+};
 use futures::executor;
 //use once_cell::sync::Lazy;
 use reqwest::{tls, Client};
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Not};
 use tl::NodeHandle;
+use tokio::fs;
 
 use crate::Clients;
 
@@ -37,7 +42,13 @@ pub async fn login(
     extract::Json(payload): extract::Json<AccessData>,
 ) -> String {
     let web_client = create_client_or_send_exist(&payload.login, &clients).await;
-    dbg!(&web_client);
+    dbg!(&clients);
+
+    if web_client.cookie.is_empty().not() {
+        if check_auth(&web_client).await {
+            return "уже авторизован".to_string();
+        }
+    }
 
     let client = web_client.client;
     let _ = client.get(SITE_URL).send().await.unwrap();
@@ -72,12 +83,16 @@ pub async fn login(
                 .write()
                 .await
                 .entry(payload.login)
-                .and_modify(|web| web.cookie = cookie_string);
+                .and_modify(|web| {
+                    web.cookie = cookie_string;
+                    web.password = payload.password
+                });
         });
 
         return "login".to_string();
     };
 
+    executor::block_on(async { clients.write().await.remove(&payload.login) });
     return "error".to_string();
 }
 
@@ -98,4 +113,125 @@ async fn create_client_or_send_exist(name: &str, clients: &Clients) -> WebClient
             password: "".to_string(),
         })
         .to_owned()
+}
+
+async fn check_auth(web_client: &WebClient) -> bool {
+    let clients_click = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "mainMenuSubView:mainMenuForm:mainMenuselectedItemName",
+            "showClientListMenuItem",
+        ),
+        (
+            "panelMenuStatemainMenuSubView:mainMenuForm:clientGroupMenu",
+            "opened",
+        ),
+        (
+            "panelMenuActionmainMenuSubView:mainMenuForm:showClientListMenuItem",
+            "mainMenuSubView:mainMenuForm:showClientListMenuItem",
+        ),
+        (
+            "mainMenuSubView:mainMenuForm",
+            "mainMenuSubView:mainMenuForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "mainMenuSubView:mainMenuForm:showClientListMenuItem",
+            "mainMenuSubView:mainMenuForm:showClientListMenuItem",
+        ),
+    ];
+
+    let resp = web_client
+        .client
+        .post(SITE_URL)
+        .form(&HashMap::from(clients_click))
+        .send()
+        .await
+        .unwrap();
+
+    let cookie = resp.cookies().next().unwrap().value().to_string();
+    if cookie == web_client.cookie {
+        return true;
+    }
+    false
+}
+
+#[derive(Deserialize)]
+pub struct Name {
+    login: String,
+}
+
+pub async fn get_organizations(
+    Extension(clients): Extension<Clients>,
+    Query(name): Query<Name>,
+) -> String {
+    let web_client = create_client_or_send_exist(&name.login, &clients).await;
+    let cookie = &web_client.cookie.to_string();
+    if cookie.is_empty() {
+        executor::block_on(async { clients.write().await.remove(&name.login) });
+        return "такого пользователя нет".to_string();
+    }
+
+    if check_auth(&web_client).await.not() {
+        return "пока не авторизован".to_string();
+    }
+
+    let client = &web_client.client;
+
+    let org_modal = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "workspaceSubView:workspaceForm",
+            "workspaceSubView:workspaceForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_6pc51",
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_6pc51",
+        ),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(org_modal))
+        .send()
+        .await
+        .unwrap();
+
+    fs::write("foo.html", resp.text().await.unwrap())
+        .await
+        .unwrap();
+
+    let ou = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+            "1",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm",
+            "orgSelectSubView:modalOrgSelectorForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
+        ),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(ou))
+        .send()
+        .await
+        .unwrap();
+
+    fs::write("foo1.html", resp.text().await.unwrap())
+        .await
+        .unwrap();
+
+    return "тут будет результат".to_string();
 }

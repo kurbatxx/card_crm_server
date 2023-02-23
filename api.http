@@ -1,4 +1,5 @@
 @server_url = http://127.0.0.1:3333
+@name = 
 
 GET {{server_url}} HTTP/1.1
 
@@ -12,7 +13,9 @@ content-type: application/json
 
 {
     "login": "",
-    "password": ""
+    "password": "" 
 }
 
 ###
+
+GET {{server_url}}/organizations?login={{name}} HTTP/1.1
