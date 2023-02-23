@@ -1,11 +1,12 @@
-use axum::extract;
+use axum::{debug_handler, extract, Extension};
+use futures::executor;
 //use once_cell::sync::Lazy;
-use reqwest::{cookie, tls, Client};
+use reqwest::{tls, Client};
 use serde::Deserialize;
-use std::{collections::HashMap, ops::Deref};
+use std::collections::HashMap;
 use tl::NodeHandle;
 
-use crate::CLIENTS;
+use crate::Clients;
 
 const SITE_URL: &str = "https://bilim.integro.kz:8181/processor/back-office/index.faces";
 const AUTH_URL: &str = "https://bilim.integro.kz:8181/processor/back-office/j_security_check";
@@ -22,8 +23,20 @@ pub struct WebClient {
     pub password: String,
 }
 
-pub async fn login(extract::Json(payload): extract::Json<AccessData>) -> String {
-    let web_client = create_client_or_send_exist(&payload.login).await;
+// #[debug_handler]
+// pub async fn nlogin(
+//     Extension(clients): Extension<Clients>,
+//     extract::Json(payload): extract::Json<AccessData>,
+// ) -> String {
+//     return "login".to_string();
+// }
+
+#[debug_handler]
+pub async fn login(
+    Extension(clients): Extension<Clients>,
+    extract::Json(payload): extract::Json<AccessData>,
+) -> String {
+    let web_client = create_client_or_send_exist(&payload.login, &clients).await;
     dbg!(&web_client);
 
     let client = web_client.client;
@@ -39,7 +52,8 @@ pub async fn login(extract::Json(payload): extract::Json<AccessData>) -> String 
         .await
         .unwrap();
 
-    let _cookie = resp.cookies().next().unwrap();
+    let cookie = resp.cookies().next().unwrap();
+    let cookie_string = cookie.value().to_string();
 
     let text = resp.text().await.unwrap();
 
@@ -53,15 +67,23 @@ pub async fn login(extract::Json(payload): extract::Json<AccessData>) -> String 
         .unwrap();
 
     if &element.inner_text(parser).to_string() == &payload.login {
+        executor::block_on(async {
+            clients
+                .write()
+                .await
+                .entry(payload.login)
+                .and_modify(|web| web.cookie = cookie_string);
+        });
+
         return "login".to_string();
     };
 
     return "error".to_string();
 }
 
-async fn create_client_or_send_exist(name: &str) -> WebClient {
-    CLIENTS
-        .lock()
+async fn create_client_or_send_exist(name: &str, clients: &Clients) -> WebClient {
+    clients
+        .write()
         .await
         .entry(name.to_string())
         .or_insert(WebClient {
