@@ -4,11 +4,12 @@ use axum::{
     Extension,
 };
 use futures::executor;
-//use once_cell::sync::Lazy;
+
 use reqwest::{tls, Client};
 use serde::Deserialize;
 use std::{collections::HashMap, ops::Not};
 use tl::NodeHandle;
+
 use tokio::fs;
 
 use crate::Clients;
@@ -116,7 +117,7 @@ async fn create_client_or_send_exist(name: &str, clients: &Clients) -> WebClient
 }
 
 async fn check_auth(web_client: &WebClient) -> bool {
-    let clients_click = [
+    let click_clients_list = [
         ("AJAXREQUEST", "j_id_jsp_659141934_0"),
         (
             "mainMenuSubView:mainMenuForm:mainMenuselectedItemName",
@@ -145,7 +146,7 @@ async fn check_auth(web_client: &WebClient) -> bool {
     let resp = web_client
         .client
         .post(SITE_URL)
-        .form(&HashMap::from(clients_click))
+        .form(&HashMap::from(click_clients_list))
         .send()
         .await
         .unwrap();
@@ -160,6 +161,14 @@ async fn check_auth(web_client: &WebClient) -> bool {
 #[derive(Deserialize)]
 pub struct Name {
     login: String,
+}
+
+#[derive(Debug)]
+pub struct Organizaton {
+    pub id: i32,
+    pub short_name: String,
+    pub full_name: String,
+    pub address: String,
 }
 
 pub async fn get_organizations(
@@ -204,7 +213,7 @@ pub async fn get_organizations(
         .await
         .unwrap();
 
-    let ou = [
+    let click_ou = [
         ("AJAXREQUEST", "j_id_jsp_659141934_0"),
         (
             "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
@@ -224,14 +233,116 @@ pub async fn get_organizations(
 
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(ou))
+        .form(&HashMap::from(click_ou))
         .send()
         .await
         .unwrap();
 
-    fs::write("foo1.html", resp.text().await.unwrap())
+    // fs::write("foo1.html", resp.text().await.unwrap())
+    //     .await
+    //     .unwrap();
+
+    let org_html = resp.text().await.unwrap();
+
+    //check first
+    let dom = tl::parse(&org_html, tl::ParserOptions::default()).unwrap();
+    let parser = dom.parser();
+
+    let element = dom
+        .get_element_by_id("orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22_table")
+        .unwrap_or(NodeHandle::new(0))
+        .get(parser)
+        .unwrap();
+
+    let button_table = &element.inner_html(parser);
+    dbg!(&button_table);
+
+    let dom = tl::parse(button_table, tl::ParserOptions::default()).unwrap();
+    let parser = dom.parser();
+    let td = dom
+        .query_selector(".dr-dscr-act.rich-datascr-act")
+        .unwrap()
+        .next()
+        .unwrap()
+        .get(parser)
+        .unwrap();
+
+    let org_html = match td.inner_text(parser).to_string().as_str() {
+        "1" => org_html.clone(),
+        _ =>  executor::block_on(click_on_org_page(1, client)),
+    };
+
+    let dom = tl::parse(&org_html, tl::ParserOptions::default()).unwrap();
+    let parser = dom.parser();
+
+    let element = dom
+        .get_element_by_id("orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:tb")
+        .unwrap_or(NodeHandle::new(0))
+        .get(parser)
+        .unwrap();
+
+    let table = &element.inner_html(parser);
+
+    let dom = tl::parse(table, tl::ParserOptions::default()).unwrap();
+    let parser = dom.parser();
+
+    let org_page: Vec<Organizaton> = dom
+        .query_selector("tr")
+        .unwrap()
+        .map(|f| {
+            let row = f.get(parser).unwrap().inner_html(parser);
+            let dom = tl::parse(&row, tl::ParserOptions::default()).unwrap();
+            let parser = dom.parser();
+            let cells: Vec<_> = dom
+                .query_selector("td")
+                .unwrap()
+                .map(|n| n.get(parser).unwrap().inner_text(parser).to_string())
+                .collect();
+
+            let org = Organizaton {
+                id: cells[0].parse::<i32>().unwrap(),
+                short_name: cells[1].to_string(),
+                full_name: cells[1].to_string(),
+                address: cells[2].to_string(),
+            };
+            org
+        })
+        .collect();
+
+    dbg!(org_page);
+
+    return "тут будет результат".to_string();
+}
+
+async fn click_on_org_page(number: i32, client: &Client) -> String {
+    let click_org_page = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+            "1",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm",
+            "orgSelectSubView:modalOrgSelectorForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        ("ajaxSingle", "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22"),
+        
+        (
+            "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22",
+            &number.to_string(),
+        ),
+        ("AJAX:EVENTS_COUNT", "1"),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(click_org_page))
+        .send()
         .await
         .unwrap();
 
-    return "тут будет результат".to_string();
+    resp.text().await.unwrap()
+
 }
