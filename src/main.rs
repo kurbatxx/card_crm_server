@@ -43,6 +43,7 @@ async fn main() {
         .route("/web_devices", get(db_api::web_devices).with_state(pool))
         .route("/organizations", get(web_api::get_organizations))
         .route("/login", post(web_api::login))
+        .route("/logout", post(web_api::logout))
         .route("/ws", get(handler).with_state(users))
         .layer(AddExtensionLayer::new(shared_state));
 

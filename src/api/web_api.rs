@@ -35,6 +35,32 @@ pub struct WebClient {
 //     return "login".to_string();
 // }
 
+pub async fn logout(
+    Extension(clients): Extension<Clients>,
+    Query(name): Query<Name>,
+) {
+    let web_client = create_client_or_send_exist(&name.login, &clients).await;
+    let client = web_client.client;
+    
+    let _resp = client
+        .post(AUTH_URL)
+        .form(&HashMap::from([
+
+            ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+            ("headerForm", "headerForm"),
+            ("autoScroll", ""),
+            ("javax.faces.ViewState", "j_id1"),
+            (
+                "headerForm:j_id_jsp_659141934_66",
+                "headerForm:j_id_jsp_659141934_66",
+            ),
+        ]))
+        .send()
+        .await
+        .unwrap();
+}
+
+
 #[debug_handler]
 pub async fn login(
     Extension(clients): Extension<Clients>,
