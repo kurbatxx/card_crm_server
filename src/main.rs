@@ -49,10 +49,9 @@ async fn main() {
     // `axum::Server` is a re-export of `hyper::Server`
     let addr = SocketAddr::from(([127, 0, 0, 1], 3333));
     println!("Run on {}", &addr);
-    axum::Server::bind(&addr)
+    let _ = axum::Server::bind(&addr)
         .serve(app.into_make_service())
-        .await
-        .unwrap();
+        .await;
 }
 
 async fn root() -> &'static str {

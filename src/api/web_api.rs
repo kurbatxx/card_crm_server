@@ -6,11 +6,9 @@ use axum::{
 use futures::executor;
 
 use reqwest::{tls, Client};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, ops::Not};
 use tl::NodeHandle;
-
-use tokio::fs;
 
 use crate::Clients;
 
@@ -163,7 +161,7 @@ pub struct Name {
     login: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Organizaton {
     pub id: i32,
     pub short_name: String,
@@ -209,9 +207,9 @@ pub async fn get_organizations(
         .await
         .unwrap();
 
-    fs::write("foo.html", resp.text().await.unwrap())
-        .await
-        .unwrap();
+    // fs::write("foo.html", resp.text().await.unwrap())
+    //     .await
+    //     .unwrap();
 
     let click_ou = [
         ("AJAXREQUEST", "j_id_jsp_659141934_0"),
@@ -242,36 +240,73 @@ pub async fn get_organizations(
     //     .await
     //     .unwrap();
 
-    let org_html = resp.text().await.unwrap();
+    let mut org_html = resp.text().await.unwrap();
+    if !check_first_org(&org_html){
+        org_html = click_on_org_page(1, client).await;
+    }
 
-    //check first
-    let dom = tl::parse(&org_html, tl::ParserOptions::default()).unwrap();
-    let parser = dom.parser();
+    let mut full_org_list: Vec<Organizaton> = vec![];
+    let org_page_vec = parse_org_page(&org_html);
+    full_org_list.extend(org_page_vec);
+    
+    let mut org_page_num = 2;
+    dbg!(org_page_num);
+    
+    loop {
+        let html = click_on_org_page(org_page_num, client).await;
+        let org_page_vec = parse_org_page(&html);
+        full_org_list.extend(org_page_vec);
+        if !check_next_org_page(&html){
+            break;
+        }
+        org_page_num += 1;
+    }
 
-    let element = dom
-        .get_element_by_id("orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22_table")
-        .unwrap_or(NodeHandle::new(0))
-        .get(parser)
+    let rez = serde_json::to_string(&full_org_list).unwrap();
+
+    return rez;
+}
+
+async fn click_on_org_page(number: i32, client: &Client) -> String {
+    let click_org_page = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        ("orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_5pc22", ""),
+        ("orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_12pc22", ""),
+        ("orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_15pc22", ""),
+        ("orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_18pc22", ""),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+            "0",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm",
+            "orgSelectSubView:modalOrgSelectorForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        ("ajaxSingle", "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22"),
+        
+        (
+            "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22",
+            &number.to_string(),
+        ),
+        ("AJAX:EVENTS_COUNT", "1"),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(click_org_page))
+        .send()
+        .await
         .unwrap();
 
-    let button_table = &element.inner_html(parser);
-    dbg!(&button_table);
+    dbg!(resp.status());
+    
+    resp.text().await.unwrap()
 
-    let dom = tl::parse(button_table, tl::ParserOptions::default()).unwrap();
-    let parser = dom.parser();
-    let td = dom
-        .query_selector(".dr-dscr-act.rich-datascr-act")
-        .unwrap()
-        .next()
-        .unwrap()
-        .get(parser)
-        .unwrap();
+}
 
-    let org_html = match td.inner_text(parser).to_string().as_str() {
-        "1" => org_html.clone(),
-        _ =>  executor::block_on(click_on_org_page(1, client)),
-    };
-
+fn parse_org_page(org_html: &String) -> Vec<Organizaton> {
     let dom = tl::parse(&org_html, tl::ParserOptions::default()).unwrap();
     let parser = dom.parser();
 
@@ -309,40 +344,65 @@ pub async fn get_organizations(
         })
         .collect();
 
-    dbg!(org_page);
-
-    return "тут будет результат".to_string();
+    org_page
 }
 
-async fn click_on_org_page(number: i32, client: &Client) -> String {
-    let click_org_page = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
-            "1",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm",
-            "orgSelectSubView:modalOrgSelectorForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        ("ajaxSingle", "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22"),
-        
-        (
-            "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22",
-            &number.to_string(),
-        ),
-        ("AJAX:EVENTS_COUNT", "1"),
-    ];
+ fn check_first_org(org_html: &String) -> bool{
+    let button_table = button_table_dom(org_html);
 
-    let resp = client
-        .post(SITE_URL)
-        .form(&HashMap::from(click_org_page))
-        .send()
-        .await
+    let dom = tl::parse(&button_table, tl::ParserOptions::default()).unwrap();
+    let parser = dom.parser();
+    let td = dom
+        .query_selector(".dr-dscr-act.rich-datascr-act")
+        .unwrap()
+        .next()
+        .unwrap()
+        .get(parser)
         .unwrap();
 
-    resp.text().await.unwrap()
+    
+    match td.inner_text(parser).to_string().as_str() {
+        "1" => {
+            println!("{}", "First");
+            true
+            //org_html.clone()
+        } ,
+        _ => {
+            dbg!(td.inner_text(parser).to_string().as_str());
+            //let n = executor::block_on(click_on_org_page(4, client));
+            false
+        },
+    }
 
+}
+    
+
+fn check_next_org_page(org_html: &String) -> bool {
+   let button_table = button_table_dom(org_html);
+   let dom = tl::parse(&button_table, tl::ParserOptions::default()).unwrap();
+    //let parser = dom.parser();
+    let td: Vec<NodeHandle> = dom
+        .query_selector(".dr-dscr-button.rich-datascr-button")
+        .unwrap()
+        .collect();
+
+    if td.len() == 1 {
+        return false
+    }
+    true 
+        
+}
+
+fn button_table_dom(org_html: &String) -> String{
+    let dom = tl::parse(&org_html, tl::ParserOptions::default()).unwrap();
+    let parser = dom.parser();
+
+    let element = dom
+        .get_element_by_id("orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22_table")
+        .unwrap_or(NodeHandle::new(0))
+        .get(parser)
+        .unwrap();
+
+    let button_table = &element.inner_html(parser);
+    button_table.to_string()
 }
