@@ -38,7 +38,8 @@ pub struct WebClient {
 pub async fn logout(
     Extension(clients): Extension<Clients>,
     Query(name): Query<Name>,
-) {
+) -> String {
+    dbg!(&name.login);
     let web_client = create_client_or_send_exist(&name.login, &clients).await;
     let client = web_client.client;
     
@@ -58,6 +59,10 @@ pub async fn logout(
         .send()
         .await
         .unwrap();
+
+    executor::block_on(async { clients.write().await.remove(&name.login) });
+
+    "logout".to_string()
 }
 
 

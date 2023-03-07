@@ -20,4 +20,5 @@ content-type: application/json
 
 GET {{server_url}}/organizations?login={{name}} HTTP/1.1
 
-GET {{server_url}}/logout?login={{name}} HTTP/1.1
+###
+POST {{server_url}}/logout?login={{name}} HTTP/1.1
