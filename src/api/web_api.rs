@@ -9,6 +9,7 @@ use reqwest::{tls, Client};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, ops::Not};
 use tl::NodeHandle;
+use tokio::fs;
 
 use crate::Clients;
 
@@ -35,18 +36,14 @@ pub struct WebClient {
 //     return "login".to_string();
 // }
 
-pub async fn logout(
-    Extension(clients): Extension<Clients>,
-    Query(name): Query<Name>,
-) -> String {
+pub async fn logout(Extension(clients): Extension<Clients>, Query(name): Query<Name>) -> String {
     dbg!(&name.login);
     let web_client = create_client_or_send_exist(&name.login, &clients).await;
     let client = web_client.client;
-    
+
     let _resp = client
         .post(AUTH_URL)
         .form(&HashMap::from([
-
             ("AJAXREQUEST", "j_id_jsp_659141934_0"),
             ("headerForm", "headerForm"),
             ("autoScroll", ""),
@@ -65,14 +62,12 @@ pub async fn logout(
     "logout".to_string()
 }
 
-
 #[debug_handler]
 pub async fn login(
     Extension(clients): Extension<Clients>,
     extract::Json(payload): extract::Json<AccessData>,
 ) -> String {
     let web_client = create_client_or_send_exist(&payload.login, &clients).await;
-    dbg!(&clients);
 
     if web_client.cookie.is_empty().not() {
         if check_auth(&web_client).await {
@@ -238,10 +233,6 @@ pub async fn get_organizations(
         .await
         .unwrap();
 
-    // fs::write("foo.html", resp.text().await.unwrap())
-    //     .await
-    //     .unwrap();
-
     let click_ou = [
         ("AJAXREQUEST", "j_id_jsp_659141934_0"),
         (
@@ -267,27 +258,23 @@ pub async fn get_organizations(
         .await
         .unwrap();
 
-    // fs::write("foo1.html", resp.text().await.unwrap())
-    //     .await
-    //     .unwrap();
-
     let mut org_html = resp.text().await.unwrap();
-    if !check_first_org(&org_html){
+    if !check_first_org(&org_html) {
         org_html = click_on_org_page(1, client).await;
     }
 
     let mut full_org_list: Vec<Organizaton> = vec![];
     let org_page_vec = parse_org_page(&org_html);
     full_org_list.extend(org_page_vec);
-    
+
     let mut org_page_num = 2;
     dbg!(org_page_num);
-    
+
     loop {
         let html = click_on_org_page(org_page_num, client).await;
         let org_page_vec = parse_org_page(&html);
         full_org_list.extend(org_page_vec);
-        if !check_next_org_page(&html){
+        if !check_next_org_page(&html) {
             break;
         }
         org_page_num += 1;
@@ -332,9 +319,8 @@ async fn click_on_org_page(number: i32, client: &Client) -> String {
         .unwrap();
 
     dbg!(resp.status());
-    
-    resp.text().await.unwrap()
 
+    resp.text().await.unwrap()
 }
 
 fn parse_org_page(org_html: &String) -> Vec<Organizaton> {
@@ -378,7 +364,7 @@ fn parse_org_page(org_html: &String) -> Vec<Organizaton> {
     org_page
 }
 
- fn check_first_org(org_html: &String) -> bool{
+fn check_first_org(org_html: &String) -> bool {
     let button_table = button_table_dom(org_html);
 
     let dom = tl::parse(&button_table, tl::ParserOptions::default()).unwrap();
@@ -391,26 +377,21 @@ fn parse_org_page(org_html: &String) -> Vec<Organizaton> {
         .get(parser)
         .unwrap();
 
-    
     match td.inner_text(parser).to_string().as_str() {
         "1" => {
             println!("{}", "First");
             true
-            //org_html.clone()
-        } ,
+        }
         _ => {
             dbg!(td.inner_text(parser).to_string().as_str());
-            //let n = executor::block_on(click_on_org_page(4, client));
             false
-        },
+        }
     }
-
 }
-    
 
 fn check_next_org_page(org_html: &String) -> bool {
-   let button_table = button_table_dom(org_html);
-   let dom = tl::parse(&button_table, tl::ParserOptions::default()).unwrap();
+    let button_table = button_table_dom(org_html);
+    let dom = tl::parse(&button_table, tl::ParserOptions::default()).unwrap();
     //let parser = dom.parser();
     let td: Vec<NodeHandle> = dom
         .query_selector(".dr-dscr-button.rich-datascr-button")
@@ -418,13 +399,12 @@ fn check_next_org_page(org_html: &String) -> bool {
         .collect();
 
     if td.len() == 1 {
-        return false
+        return false;
     }
-    true 
-        
+    true
 }
 
-fn button_table_dom(org_html: &String) -> String{
+fn button_table_dom(org_html: &String) -> String {
     let dom = tl::parse(&org_html, tl::ParserOptions::default()).unwrap();
     let parser = dom.parser();
 
@@ -436,4 +416,182 @@ fn button_table_dom(org_html: &String) -> String{
 
     let button_table = &element.inner_html(parser);
     button_table.to_string()
+}
+
+#[derive(Deserialize)]
+pub struct SearchQuery {
+    pub search: String,
+    pub school_id: i32,
+    pub deleted: bool,
+}
+
+pub async fn init_search(
+    Extension(clients): Extension<Clients>,
+    Query(name): Query<Name>,
+    extract::Json(payload): extract::Json<SearchQuery>,
+) -> String {
+    let web_client = create_client_or_send_exist(&name.login, &clients).await;
+
+    if web_client.cookie.is_empty().not() {
+        if check_auth(&web_client).await.not() {
+            return "Не авторизован".to_string();
+        }
+    }
+
+    let client = web_client.client;
+    let _ = client.get(SITE_URL).send().await.unwrap();
+
+    let click_ou = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+            "1",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm",
+            "orgSelectSubView:modalOrgSelectorForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
+        ),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(click_ou))
+        .send()
+        .await
+        .unwrap();
+
+    let click_delete_filter_ou = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+            "1",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm",
+            "orgSelectSubView:modalOrgSelectorForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_6pc22",
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_6pc22",
+        ),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(click_delete_filter_ou))
+        .send()
+        .await
+        .unwrap();
+
+    let submit_org_filter = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+            "1",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm",
+            "orgSelectSubView:modalOrgSelectorForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22",
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22",
+        ),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(submit_org_filter))
+        .send()
+        .await
+        .unwrap();
+
+    let search_param = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_1pc51",
+            "true",
+        ),
+        (
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_8pc51",
+            "on",
+        ),
+        (
+            //Показывать удалённых
+            "workspaceSubView:workspaceForm:workspacePageSubView:showDeletedClients",
+            if payload.deleted { "on" } else { "" }, //"on",
+        ),
+        // (
+        //     //ID
+        //     "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51",
+        //     if id == 0 { "" } else { &id_str },
+        // ),
+        (
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_18pc51",
+            "-1",
+        ),
+        (
+            //Фамилия
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51",
+            payload.search.as_str(),
+        ),
+        (
+            //Имя
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51",
+            "",
+        ),
+        (
+            //Отчество
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51",
+            "",
+        ),
+        (
+            //0 не важно наличе карт
+            //1 есть карты
+            //2 нет карт
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_43pc51",
+            //&search_request.cards.to_string(),
+            "0",
+        ),
+        (
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_46pc51",
+            "0",
+        ),
+        (
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
+            "j_id_jsp_635818149_109pc51",
+        ),
+        (
+            "workspaceSubView:workspaceForm",
+            "workspaceSubView:workspaceForm",
+        ),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51",
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51",
+        ),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(search_param))
+        .send()
+        .await
+        .unwrap();
+
+    fs::write("search_res.html", resp.text().await.unwrap())
+        .await
+        .unwrap();
+
+    "result".to_string()
 }

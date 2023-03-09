@@ -22,3 +22,13 @@ GET {{server_url}}/organizations?login={{name}} HTTP/1.1
 
 ###
 POST {{server_url}}/logout?login={{name}} HTTP/1.1
+
+###
+POST {{server_url}}/search?login={{name}} HTTP/1.1
+content-type: application/json
+
+{
+    "search": "",
+    "school_id": 0,
+    "deleted" : false
+}
