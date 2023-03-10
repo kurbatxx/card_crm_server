@@ -303,7 +303,6 @@ async fn click_on_org_page(number: i32, client: &Client) -> String {
         ("autoScroll", ""),
         ("javax.faces.ViewState", "j_id1"),
         ("ajaxSingle", "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22"),
-        
         (
             "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22",
             &number.to_string(),
@@ -438,6 +437,8 @@ pub async fn init_search(
         }
     }
 
+    let (id, full_name) = convert_to_id_and_fullname(payload.search.to_string());
+
     let client = web_client.client;
     let _ = client.get(SITE_URL).send().await.unwrap();
 
@@ -516,6 +517,8 @@ pub async fn init_search(
         .await
         .unwrap();
 
+    let id_str = &id.to_string();
+
     let search_param = [
         ("AJAXREQUEST", "j_id_jsp_659141934_0"),
         (
@@ -531,11 +534,11 @@ pub async fn init_search(
             "workspaceSubView:workspaceForm:workspacePageSubView:showDeletedClients",
             if payload.deleted { "on" } else { "" }, //"on",
         ),
-        // (
-        //     //ID
-        //     "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51",
-        //     if id == 0 { "" } else { &id_str },
-        // ),
+        (
+            //ID
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51",
+            if id == 0 { "" } else { id_str },
+        ),
         (
             "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_18pc51",
             "-1",
@@ -543,17 +546,17 @@ pub async fn init_search(
         (
             //Фамилия
             "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51",
-            payload.search.as_str(),
+            full_name.last_name.as_str(),
         ),
         (
             //Имя
             "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51",
-            "",
+            full_name.name.as_str(),
         ),
         (
             //Отчество
             "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51",
-            "",
+            full_name.surname.as_str(),
         ),
         (
             //0 не важно наличе карт
@@ -589,9 +592,124 @@ pub async fn init_search(
         .await
         .unwrap();
 
-    fs::write("search_res.html", resp.text().await.unwrap())
-        .await
+    // fs::write("search_res.html", resp.text().await.unwrap())
+    //     .await
+    //     .unwrap();
+
+    let org_client_page = resp.text().await.unwrap();
+    let org_clients: Vec<OrgClient> = parse_clients_page(&org_client_page);
+    let rez = serde_json::to_string(&org_clients).unwrap();
+
+    rez.to_string()
+}
+
+#[derive(Serialize)]
+pub struct OrgClient {
+    pub id: String,
+    pub name: String,
+    pub group: String,
+    pub org: String,
+    pub balance: String,
+}
+
+fn parse_clients_page(client_html: &String) -> Vec<OrgClient> {
+    let dom = tl::parse(&client_html, tl::ParserOptions::default()).unwrap();
+    let parser = dom.parser();
+
+    let element = dom
+        .get_element_by_id("workspaceSubView:workspaceForm:workspacePageSubView:clientListTable")
+        .unwrap_or(NodeHandle::new(0))
+        .get(parser)
         .unwrap();
 
-    "result".to_string()
+    let table = &element.inner_html(parser);
+
+    let mut skip_rows = 2;
+    let buttons = dom.get_element_by_id("workspaceSubView:workspaceForm:workspacePageSubView:clientListTable:j_id_jsp_635818149_104pc51_table");
+    dbg!(buttons);
+
+    if buttons.is_some() {
+        skip_rows += 1;
+    }
+
+    let dom = tl::parse(table, tl::ParserOptions::default()).unwrap();
+    let parser = dom.parser();
+
+    let org_page: Vec<OrgClient> = dom
+        .query_selector("tr")
+        .unwrap()
+        .skip(skip_rows)
+        .map(|f| {
+            let row = f.get(parser).unwrap().inner_html(parser);
+            let dom = tl::parse(&row, tl::ParserOptions::default()).unwrap();
+            let parser = dom.parser();
+            let cells: Vec<_> = dom
+                .query_selector("td")
+                .unwrap()
+                .map(|n| n.get(parser).unwrap().inner_text(parser).to_string())
+                .collect();
+
+            let org_client = OrgClient {
+                id: cells[1].to_string(),
+                name: cells[3].to_string(),
+                group: cells[4].to_string(),
+                org: cells[6].to_string(),
+                balance: cells[7].to_string(),
+            };
+
+            org_client
+        })
+        .collect();
+
+    org_page
+}
+
+struct FullName {
+    name: String,
+    last_name: String,
+    surname: String,
+}
+
+fn convert_to_id_and_fullname(search: String) -> (i32, FullName) {
+    let search = search.trim();
+    let id = search.parse::<i32>().unwrap_or_default();
+
+    let mut full_name = FullName {
+        name: "".to_string(),
+        last_name: "".to_string(),
+        surname: "".to_string(),
+    };
+
+    if id == 0 {
+        let arr: Vec<_> = search.split_whitespace().collect();
+        match arr.len() {
+            0 => {}
+            1 => full_name.last_name = arr[0].to_string(),
+            2 => {
+                if arr[0].contains("*").not() {
+                    full_name.last_name = arr[0].to_string();
+                }
+
+                if arr[1].contains("*").not() {
+                    full_name.name = arr[1].to_string();
+                }
+            }
+            3.. => {
+                if arr[0].contains("*").not() {
+                    full_name.last_name = arr[0].to_string();
+                }
+
+                if arr[1].contains("*").not() {
+                    full_name.name = arr[1].to_string();
+                }
+
+                if arr[2].contains("*").not() {
+                    full_name.surname = arr[2].to_string();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    (id, full_name)
 }
