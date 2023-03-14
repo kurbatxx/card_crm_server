@@ -26,6 +26,7 @@ pub struct WebClient {
     pub client: Client,
     pub cookie: String,
     pub password: String,
+    pub search_query: Option<SearchQuery>,
 }
 
 // #[debug_handler]
@@ -136,6 +137,7 @@ async fn create_client_or_send_exist(name: &str, clients: &Clients) -> WebClient
                 .unwrap(),
             cookie: "".to_string(),
             password: "".to_string(),
+            search_query: None,
         })
         .to_owned()
 }
@@ -417,7 +419,7 @@ fn button_table_dom(org_html: &String) -> String {
     button_table.to_string()
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct SearchQuery {
     pub search: String,
     pub school_id: i32,
@@ -429,13 +431,21 @@ pub async fn init_search(
     Query(name): Query<Name>,
     extract::Json(payload): extract::Json<SearchQuery>,
 ) -> String {
-    let web_client = create_client_or_send_exist(&name.login, &clients).await;
+    let mut web_client = create_client_or_send_exist(&name.login, &clients).await;
 
     if web_client.cookie.is_empty().not() {
         if check_auth(&web_client).await.not() {
             return "Не авторизован".to_string();
         }
     }
+
+    web_client.search_query = Some(payload.clone());
+    clients
+        .blocking_write()
+        .insert(name.login.clone(), web_client);
+
+    let web_client = create_client_or_send_exist(&name.login, &clients).await;
+    dbg!(&web_client.search_query);
 
     let (id, full_name) = convert_to_id_and_fullname(payload.search.to_string());
 
