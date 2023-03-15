@@ -32,3 +32,6 @@ content-type: application/json
     "school_id": 0,
     "deleted" : false
 }
+
+###
+POST {{server_url}}/search_page?login={{name}}&page_number=12 HTTP/1.1

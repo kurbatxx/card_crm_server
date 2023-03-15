@@ -37,6 +37,12 @@ pub struct WebClient {
 //     return "login".to_string();
 // }
 
+#[derive(Serialize)]
+pub struct OrgClientsWithNextPage {
+    pub org_clients: Vec<OrgClient>,
+    pub next_page_exist: bool,
+}
+
 pub async fn logout(Extension(clients): Extension<Clients>, Query(name): Query<Name>) -> String {
     dbg!(&name.login);
     let web_client = create_client_or_send_exist(&name.login, &clients).await;
@@ -189,6 +195,12 @@ pub struct Name {
     login: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct CurrentSearchPage {
+    login: String,
+    page_number: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct Organizaton {
     pub id: i32,
@@ -276,7 +288,7 @@ pub async fn get_organizations(
         let html = click_on_org_page(org_page_num, client).await;
         let org_page_vec = parse_org_page(&html);
         full_org_list.extend(org_page_vec);
-        if !check_next_org_page(&html) {
+        if !check_next_page(&html) {
             break;
         }
         org_page_num += 1;
@@ -390,20 +402,20 @@ fn check_first_org(org_html: &String) -> bool {
     }
 }
 
-fn check_next_org_page(org_html: &String) -> bool {
-    let button_table = button_table_dom(org_html);
-    let dom = tl::parse(&button_table, tl::ParserOptions::default()).unwrap();
-    //let parser = dom.parser();
-    let td: Vec<NodeHandle> = dom
-        .query_selector(".dr-dscr-button.rich-datascr-button")
-        .unwrap()
-        .collect();
+// fn check_next_org_page(org_html: &String) -> bool {
+//     let button_table = button_table_dom(org_html);
+//     let dom = tl::parse(&button_table, tl::ParserOptions::default()).unwrap();
+//     //let parser = dom.parser();
+//     let td: Vec<NodeHandle> = dom
+//         .query_selector(".dr-dscr-button.rich-datascr-button")
+//         .unwrap()
+//         .collect();
 
-    if td.len() == 1 {
-        return false;
-    }
-    true
-}
+//     if td.len() == 1 {
+//         return false;
+//     }
+//     true
+// }
 
 fn button_table_dom(org_html: &String) -> String {
     let dom = tl::parse(&org_html, tl::ParserOptions::default()).unwrap();
@@ -428,10 +440,10 @@ pub struct SearchQuery {
 
 pub async fn init_search(
     Extension(clients): Extension<Clients>,
-    Query(name): Query<Name>,
+    Query(query): Query<Name>,
     extract::Json(payload): extract::Json<SearchQuery>,
 ) -> String {
-    let mut web_client = create_client_or_send_exist(&name.login, &clients).await;
+    let mut web_client = create_client_or_send_exist(&query.login, &clients).await;
 
     if web_client.cookie.is_empty().not() {
         if check_auth(&web_client).await.not() {
@@ -441,10 +453,11 @@ pub async fn init_search(
 
     web_client.search_query = Some(payload.clone());
     clients
-        .blocking_write()
-        .insert(name.login.clone(), web_client);
+        .write()
+        .await
+        .insert(query.login.clone(), web_client);
 
-    let web_client = create_client_or_send_exist(&name.login, &clients).await;
+    let web_client = create_client_or_send_exist(&query.login, &clients).await;
     dbg!(&web_client.search_query);
 
     let (id, full_name) = convert_to_id_and_fullname(payload.search.to_string());
@@ -607,10 +620,17 @@ pub async fn init_search(
     //     .unwrap();
 
     let org_client_page = resp.text().await.unwrap();
-    let org_clients: Vec<OrgClient> = parse_clients_page(&org_client_page);
-    let rez = serde_json::to_string(&org_clients).unwrap();
+    let (org_clients, next_page_exist): (Vec<OrgClient>, bool) =
+        parse_clients_page(&org_client_page);
 
-    rez.to_string()
+    let org_clienst_with_next_page = OrgClientsWithNextPage {
+        org_clients,
+        next_page_exist,
+    };
+
+    let res = serde_json::to_string(&org_clienst_with_next_page).unwrap();
+
+    res.to_string()
 }
 
 #[derive(Serialize)]
@@ -622,7 +642,9 @@ pub struct OrgClient {
     pub balance: String,
 }
 
-fn parse_clients_page(client_html: &String) -> Vec<OrgClient> {
+fn parse_clients_page(client_html: &String) -> (Vec<OrgClient>, bool) {
+    let mut next_page_exist = false;
+
     let dom = tl::parse(&client_html, tl::ParserOptions::default()).unwrap();
     let parser = dom.parser();
 
@@ -640,12 +662,20 @@ fn parse_clients_page(client_html: &String) -> Vec<OrgClient> {
 
     if buttons.is_some() {
         skip_rows += 1;
+        next_page_exist = check_next_page(
+            &buttons
+                .unwrap()
+                .get(parser)
+                .unwrap()
+                .inner_html(parser)
+                .to_string(),
+        );
     }
 
     let dom = tl::parse(table, tl::ParserOptions::default()).unwrap();
     let parser = dom.parser();
 
-    let org_page: Vec<OrgClient> = dom
+    let org_clients_page: Vec<OrgClient> = dom
         .query_selector("tr")
         .unwrap()
         .skip(skip_rows)
@@ -671,7 +701,7 @@ fn parse_clients_page(client_html: &String) -> Vec<OrgClient> {
         })
         .collect();
 
-    org_page
+    (org_clients_page, next_page_exist)
 }
 
 struct FullName {
@@ -693,7 +723,6 @@ fn convert_to_id_and_fullname(search: String) -> (i32, FullName) {
     if id == 0 {
         let arr: Vec<_> = search.split_whitespace().collect();
         match arr.len() {
-            0 => {}
             1 => full_name.last_name = arr[0].to_string(),
             2 => {
                 if arr[0].contains("*").not() {
@@ -722,4 +751,87 @@ fn convert_to_id_and_fullname(search: String) -> (i32, FullName) {
     }
 
     (id, full_name)
+}
+
+pub async fn set_search_page(
+    Extension(clients): Extension<Clients>,
+    Query(query): Query<CurrentSearchPage>,
+) -> String {
+    let web_client = create_client_or_send_exist(&query.login, &clients).await;
+    dbg!(&web_client);
+
+    if web_client.cookie.is_empty().not() {
+        if check_auth(&web_client).await.not() {
+            return "Не авторизован".to_string();
+        }
+    }
+
+    let client = web_client.client;
+
+    let click_bottom_number = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
+            "j_id_jsp_635818149_109pc51",
+        ),
+        (
+            "workspaceSubView:workspaceForm",
+            "workspaceSubView:workspaceForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "workspaceSubView:workspaceForm:workspacePageSubView:clientListTable:j_id_jsp_635818149_104pc51",
+            &query.page_number,
+        ),
+        (
+            "ajaxSingle",
+            "workspaceSubView:workspaceForm:workspacePageSubView:clientListTable:j_id_jsp_635818149_104pc51",
+        ),
+        ("AJAX:EVENTS_COUNT", "1"),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(click_bottom_number))
+        .send()
+        .await
+        .unwrap();
+
+    let org_client_page = resp.text().await.unwrap();
+    let (org_clients, next_page_exist): (Vec<OrgClient>, bool) =
+        parse_clients_page(&org_client_page);
+
+    let clients_with_next_page = OrgClientsWithNextPage {
+        org_clients,
+        next_page_exist,
+    };
+
+    let res = serde_json::to_string(&clients_with_next_page).unwrap();
+
+    res.to_string()
+}
+
+fn check_next_page(html: &String) -> bool {
+    let mut next_page_exist = false;
+
+    let button_table = button_table_dom(html);
+    let dom = tl::parse(&button_table, tl::ParserOptions::default()).unwrap();
+    let parser = dom.parser();
+
+    if let Some(i) = dom.query_selector("img[src]") {
+        let images: Vec<NodeHandle> = i.collect();
+        dbg!(&images);
+
+        for img in images {
+            let out_html = img.get(parser).unwrap().outer_html(parser).to_string();
+            if out_html.contains("right-arrow.png") {
+                next_page_exist = true;
+                break;
+            }
+        }
+    }
+
+    dbg!(next_page_exist);
+    next_page_exist
 }
