@@ -44,7 +44,6 @@ pub struct OrgClientsWithNextPage {
 }
 
 pub async fn logout(Extension(clients): Extension<Clients>, Query(name): Query<Name>) -> String {
-    dbg!(&name.login);
     let web_client = create_client_or_send_exist(&name.login, &clients).await;
     let client = web_client.client;
 
@@ -282,7 +281,6 @@ pub async fn get_organizations(
     full_org_list.extend(org_page_vec);
 
     let mut org_page_num = 2;
-    dbg!(org_page_num);
 
     loop {
         let html = click_on_org_page(org_page_num, client).await;
@@ -330,8 +328,6 @@ async fn click_on_org_page(number: i32, client: &Client) -> String {
         .send()
         .await
         .unwrap();
-
-    dbg!(resp.status());
 
     resp.text().await.unwrap()
 }
@@ -443,6 +439,7 @@ pub async fn init_search(
     Query(query): Query<Name>,
     extract::Json(payload): extract::Json<SearchQuery>,
 ) -> String {
+    dbg!("init_search");
     let mut web_client = create_client_or_send_exist(&query.login, &clients).await;
 
     if web_client.cookie.is_empty().not() {
@@ -465,80 +462,109 @@ pub async fn init_search(
     let client = web_client.client;
     let _ = client.get(SITE_URL).send().await.unwrap();
 
-    let click_ou = [
+    let clear_button = [
         ("AJAXREQUEST", "j_id_jsp_659141934_0"),
         (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
-            "1",
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
+            "j_id_jsp_635818149_109pc51",
         ),
         (
-            "orgSelectSubView:modalOrgSelectorForm",
-            "orgSelectSubView:modalOrgSelectorForm",
+            "workspaceSubView:workspaceForm",
+            "workspaceSubView:workspaceForm",
         ),
         ("autoScroll", ""),
         ("javax.faces.ViewState", "j_id1"),
         (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_54pc51",
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_54pc51",
+        ),
+        (
+            "ajaxSingle",
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_54pc51",
         ),
     ];
 
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(click_ou))
+        .form(&HashMap::from(clear_button))
         .send()
         .await
         .unwrap();
 
-    let click_delete_filter_ou = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
-            "1",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm",
-            "orgSelectSubView:modalOrgSelectorForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_6pc22",
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_6pc22",
-        ),
-    ];
+    // let click_ou = [
+    //     ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+    //     (
+    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+    //         "1",
+    //     ),
+    //     (
+    //         "orgSelectSubView:modalOrgSelectorForm",
+    //         "orgSelectSubView:modalOrgSelectorForm",
+    //     ),
+    //     ("autoScroll", ""),
+    //     ("javax.faces.ViewState", "j_id1"),
+    //     (
+    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
+    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
+    //     ),
+    // ];
 
-    let resp = client
-        .post(SITE_URL)
-        .form(&HashMap::from(click_delete_filter_ou))
-        .send()
-        .await
-        .unwrap();
+    // let resp = client
+    //     .post(SITE_URL)
+    //     .form(&HashMap::from(click_ou))
+    //     .send()
+    //     .await
+    //     .unwrap();
 
-    let submit_org_filter = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
-            "1",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm",
-            "orgSelectSubView:modalOrgSelectorForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22",
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22",
-        ),
-    ];
+    // let click_delete_filter_ou = [
+    //     ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+    //     (
+    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+    //         "1",
+    //     ),
+    //     (
+    //         "orgSelectSubView:modalOrgSelectorForm",
+    //         "orgSelectSubView:modalOrgSelectorForm",
+    //     ),
+    //     ("autoScroll", ""),
+    //     ("javax.faces.ViewState", "j_id1"),
+    //     (
+    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_6pc22",
+    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_6pc22",
+    //     ),
+    // ];
 
-    let resp = client
-        .post(SITE_URL)
-        .form(&HashMap::from(submit_org_filter))
-        .send()
-        .await
-        .unwrap();
+    // let resp = client
+    //     .post(SITE_URL)
+    //     .form(&HashMap::from(click_delete_filter_ou))
+    //     .send()
+    //     .await
+    //     .unwrap();
+
+    // let submit_org_filter = [
+    //     ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+    //     (
+    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+    //         "1",
+    //     ),
+    //     (
+    //         "orgSelectSubView:modalOrgSelectorForm",
+    //         "orgSelectSubView:modalOrgSelectorForm",
+    //     ),
+    //     ("autoScroll", ""),
+    //     ("javax.faces.ViewState", "j_id1"),
+    //     (
+    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22",
+    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22",
+    //     ),
+    // ];
+
+    // let resp = client
+    //     .post(SITE_URL)
+    //     .form(&HashMap::from(submit_org_filter))
+    //     .send()
+    //     .await
+    //     .unwrap();
 
     let id_str = &id.to_string();
 
@@ -658,7 +684,6 @@ fn parse_clients_page(client_html: &String) -> (Vec<OrgClient>, bool) {
 
     let mut skip_rows = 2;
     let buttons = dom.get_element_by_id("workspaceSubView:workspaceForm:workspacePageSubView:clientListTable:j_id_jsp_635818149_104pc51_table");
-    dbg!(buttons);
 
     if buttons.is_some() {
         skip_rows += 1;
@@ -758,7 +783,6 @@ pub async fn set_search_page(
     Query(query): Query<CurrentSearchPage>,
 ) -> String {
     let web_client = create_client_or_send_exist(&query.login, &clients).await;
-    dbg!(&web_client);
 
     if web_client.cookie.is_empty().not() {
         if check_auth(&web_client).await.not() {

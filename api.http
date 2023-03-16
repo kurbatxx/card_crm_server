@@ -1,6 +1,8 @@
 @server_url = http://127.0.0.1:3333
 @name = 
 
+@page_num = 2
+
 GET {{server_url}} HTTP/1.1
 
 ###
@@ -28,10 +30,10 @@ POST {{server_url}}/search?login={{name}} HTTP/1.1
 content-type: application/json
 
 {
-    "search": "",
+    "search": "Петров",
     "school_id": 0,
     "deleted" : false
 }
 
 ###
-POST {{server_url}}/search_page?login={{name}}&page_number=12 HTTP/1.1
+POST {{server_url}}/search_page?login={{name}}&page_number={{page_num}} HTTP/1.1
