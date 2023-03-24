@@ -491,81 +491,6 @@ pub async fn init_search(
         .await
         .unwrap();
 
-    // let click_ou = [
-    //     ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-    //     (
-    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
-    //         "1",
-    //     ),
-    //     (
-    //         "orgSelectSubView:modalOrgSelectorForm",
-    //         "orgSelectSubView:modalOrgSelectorForm",
-    //     ),
-    //     ("autoScroll", ""),
-    //     ("javax.faces.ViewState", "j_id1"),
-    //     (
-    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
-    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
-    //     ),
-    // ];
-
-    // let resp = client
-    //     .post(SITE_URL)
-    //     .form(&HashMap::from(click_ou))
-    //     .send()
-    //     .await
-    //     .unwrap();
-
-    // let click_delete_filter_ou = [
-    //     ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-    //     (
-    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
-    //         "1",
-    //     ),
-    //     (
-    //         "orgSelectSubView:modalOrgSelectorForm",
-    //         "orgSelectSubView:modalOrgSelectorForm",
-    //     ),
-    //     ("autoScroll", ""),
-    //     ("javax.faces.ViewState", "j_id1"),
-    //     (
-    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_6pc22",
-    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_6pc22",
-    //     ),
-    // ];
-
-    // let resp = client
-    //     .post(SITE_URL)
-    //     .form(&HashMap::from(click_delete_filter_ou))
-    //     .send()
-    //     .await
-    //     .unwrap();
-
-    // let submit_org_filter = [
-    //     ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-    //     (
-    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
-    //         "1",
-    //     ),
-    //     (
-    //         "orgSelectSubView:modalOrgSelectorForm",
-    //         "orgSelectSubView:modalOrgSelectorForm",
-    //     ),
-    //     ("autoScroll", ""),
-    //     ("javax.faces.ViewState", "j_id1"),
-    //     (
-    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22",
-    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22",
-    //     ),
-    // ];
-
-    // let resp = client
-    //     .post(SITE_URL)
-    //     .form(&HashMap::from(submit_org_filter))
-    //     .send()
-    //     .await
-    //     .unwrap();
-
     let id_str = &id.to_string();
 
     let search_param = [
@@ -858,4 +783,314 @@ fn check_next_page(html: &String) -> bool {
 
     dbg!(next_page_exist);
     next_page_exist
+}
+
+pub async fn download_all(
+    Extension(clients): Extension<Clients>,
+    Query(query): Query<Name>,
+    extract::Json(payload): extract::Json<SearchQuery>,
+) -> String {
+    dbg!("all");
+    let mut web_client = create_client_or_send_exist(&query.login, &clients).await;
+
+    if web_client.cookie.is_empty().not() {
+        if check_auth(&web_client).await.not() {
+            return "Не авторизован".to_string();
+        }
+    }
+
+    web_client.search_query = Some(payload.clone());
+    clients
+        .write()
+        .await
+        .insert(query.login.clone(), web_client);
+
+    let web_client = create_client_or_send_exist(&query.login, &clients).await;
+    dbg!(&web_client.search_query);
+
+    let (id, full_name) = convert_to_id_and_fullname(payload.search.to_string());
+
+    let client = web_client.client;
+    let _ = client.get(SITE_URL).send().await.unwrap();
+
+    let clear_button = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
+            "j_id_jsp_635818149_109pc51",
+        ),
+        (
+            "workspaceSubView:workspaceForm",
+            "workspaceSubView:workspaceForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_54pc51",
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_54pc51",
+        ),
+        (
+            "ajaxSingle",
+            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_54pc51",
+        ),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(clear_button))
+        .send()
+        .await
+        .unwrap();
+
+    let click_ou = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+            "1",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm",
+            "orgSelectSubView:modalOrgSelectorForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
+        ),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(click_ou))
+        .send()
+        .await
+        .unwrap();
+
+    // let click_delete_filter_ou = [
+    //     ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+    //     (
+    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+    //         "1",
+    //     ),
+    //     (
+    //         "orgSelectSubView:modalOrgSelectorForm",
+    //         "orgSelectSubView:modalOrgSelectorForm",
+    //     ),
+    //     ("autoScroll", ""),
+    //     ("javax.faces.ViewState", "j_id1"),
+    //     (
+    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_6pc22",
+    //         "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_6pc22",
+    //     ),
+    // ];
+
+    // let resp = client
+    //     .post(SITE_URL)
+    //     .form(&HashMap::from(click_delete_filter_ou))
+    //     .send()
+    //     .await
+    //     .unwrap();
+
+    let filter_id = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_18pc22",
+            &payload.school_id.to_string(),
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+            "0",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm",
+            "orgSelectSubView:modalOrgSelectorForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_19pc22",
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_19pc22",
+        ),
+        ("AJAX:EVENTS_COUNT", "1"),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(filter_id))
+        .send()
+        .await
+        .unwrap();
+
+    let set_org = resp.text().await.unwrap();
+
+    fs::write("filter_id.html", &set_org).await.unwrap();
+
+    let click_first_row_org_id = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+            "0",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm",
+            "orgSelectSubView:modalOrgSelectorForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:0:j_id_jsp_685543358_32pc22",
+            "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:0:j_id_jsp_685543358_32pc22",
+        ),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(click_first_row_org_id))
+        .send()
+        .await
+        .unwrap();
+
+    let select_org = resp.text().await.unwrap();
+
+    fs::write("select_org.html", &select_org).await.unwrap();
+
+    let submit_org_filter = [
+        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_5pc22",
+            "",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_12pc22",
+            "",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_15pc22",
+            "",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_18pc22",
+            &payload.school_id.to_string(),
+        ),
+        ("orgSelectSubView:modalOrgSelectorForm:regionsList", ""),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
+            "0",
+        ),
+        (
+            "orgSelectSubView:modalOrgSelectorForm",
+            "orgSelectSubView:modalOrgSelectorForm",
+        ),
+        ("autoScroll", ""),
+        ("javax.faces.ViewState", "j_id1"),
+        (
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22",
+            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22",
+        ),
+    ];
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(submit_org_filter))
+        .send()
+        .await
+        .unwrap();
+
+    let selected2 = resp.text().await.unwrap();
+    fs::write("select_org2.html", &selected2).await.unwrap();
+
+    // let id_str = &id.to_string();
+    // let search_param = [
+    //     ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+    //     (
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_1pc51",
+    //         "true",
+    //     ),
+    //     (
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_8pc51",
+    //         "on",
+    //     ),
+    //     (
+    //         //Показывать удалённых
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:showDeletedClients",
+    //         if payload.deleted { "on" } else { "" }, //"on",
+    //     ),
+    //     (
+    //         //ID
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51",
+    //         if id == 0 { "" } else { id_str },
+    //     ),
+    //     (
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_18pc51",
+    //         "-1",
+    //     ),
+    //     (
+    //         //Фамилия
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51",
+    //         full_name.last_name.as_str(),
+    //     ),
+    //     (
+    //         //Имя
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51",
+    //         full_name.name.as_str(),
+    //     ),
+    //     (
+    //         //Отчество
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51",
+    //         full_name.surname.as_str(),
+    //     ),
+    //     (
+    //         //0 не важно наличе карт
+    //         //1 есть карты
+    //         //2 нет карт
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_43pc51",
+    //         //&search_request.cards.to_string(),
+    //         "0",
+    //     ),
+    //     (
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_46pc51",
+    //         "0",
+    //     ),
+    //     (
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
+    //         "j_id_jsp_635818149_109pc51",
+    //     ),
+    //     (
+    //         "workspaceSubView:workspaceForm",
+    //         "workspaceSubView:workspaceForm",
+    //     ),
+    //     ("javax.faces.ViewState", "j_id1"),
+    //     (
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51",
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51",
+    //     ),
+    // ];
+
+    // let resp = client
+    //     .post(SITE_URL)
+    //     .form(&HashMap::from(search_param))
+    //     .send()
+    //     .await
+    //     .unwrap();
+
+    // let org_client_page = resp.text().await.unwrap();
+
+    // fs::write("search_res.html", &org_client_page)
+    //     .await
+    //     .unwrap();
+
+    // let (org_clients, next_page_exist): (Vec<OrgClient>, bool) =
+    //     parse_clients_page(&org_client_page);
+
+    // let org_clienst_with_next_page = OrgClientsWithNextPage {
+    //     org_clients,
+    //     next_page_exist,
+    // };
+
+    // let res = serde_json::to_string(&org_clienst_with_next_page).unwrap();
+
+    // res.to_string()
+
+    "--".to_string()
 }

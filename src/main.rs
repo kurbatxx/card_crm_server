@@ -46,6 +46,7 @@ async fn main() {
         .route("/logout", post(web_api::logout))
         .route("/search", post(web_api::init_search))
         .route("/search_page", post(web_api::set_search_page))
+        .route("/download_all", post(web_api::download_all))
         .route("/ws", get(handler).with_state(users))
         .layer(AddExtensionLayer::new(shared_state));
 
