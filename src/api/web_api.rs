@@ -1269,11 +1269,144 @@ pub async fn download_all(
         .await
         .unwrap();
 
-    fs::write("6_search_submit.html", resp.text().await.unwrap())
-        .await
-        .unwrap();
+    let mut res = resp.text().await.unwrap();
+
+    fs::write("6_search_submit.html", &res).await.unwrap();
 
     //Первая страница с фильтром..
 
-    "--".to_string()
+    let mut clienst_list: Vec<OrgClient> = vec![];
+
+    loop {
+        let (part_clients, next_page_exist) = parse_clients_page(&res);
+        clienst_list.extend(part_clients);
+        if next_page_exist.not() {
+            break;
+        }
+
+        let next = [
+            ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_1pc51",
+                "true",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_5pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_8pc51",
+                "on",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_14pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_16pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_18pc51",
+                "-1",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51",
+                "", //fam
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_28pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_32pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_38pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_40pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_43pc51",
+                "0",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_46pc51",
+                "0",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_49pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_51pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_51pc51",
+                "",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
+                "j_id_jsp_635818149_109pc51",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_112pc51",
+                "0,00",
+            ),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_126pc51",
+                "0,00",
+            ),
+
+            ("workspaceSubView:workspaceForm:workspacePageSubView:removedClientDeletePanelOpenedState", 
+                "",
+            ),
+            ("workspaceSubView:workspaceForm", "workspaceSubView:workspaceForm"),
+            ("autoScroll", ""),
+
+            ("javax.faces.ViewState", "j_id1"),
+            (
+                "workspaceSubView:workspaceForm:workspacePageSubView:clientListTable:j_id_jsp_635818149_104pc51", 
+                "next",
+            ),
+            (
+                "ajaxSingle",	
+                "workspaceSubView:workspaceForm:workspacePageSubView:clientListTable:j_id_jsp_635818149_104pc51",
+            ),
+            ("AJAX:EVENTS_COUNT", "1"),
+            
+            ("workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51", "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51"),
+        ];
+
+        let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(next))
+        .send()
+        .await
+        .unwrap();
+
+        res = resp.text().await.unwrap();
+    }
+
+    let res = serde_json::to_string(&clienst_list).unwrap();
+    fs::write("all.json", &res).await.unwrap();
+
+    "complete".to_string()
 }
