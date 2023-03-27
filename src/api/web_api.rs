@@ -587,7 +587,7 @@ pub async fn init_search(
 #[derive(Serialize)]
 pub struct OrgClient {
     pub id: String,
-    pub name: String,
+    pub fullname: FullName,
     pub group: String,
     pub org: String,
     pub balance: String,
@@ -641,7 +641,7 @@ fn parse_clients_page(client_html: &String) -> (Vec<OrgClient>, bool) {
 
             let org_client = OrgClient {
                 id: cells[1].to_string(),
-                name: cells[3].to_string(),
+                fullname: get_fullname(cells[3].to_string()), 
                 group: cells[4].to_string(),
                 org: cells[6].to_string(),
                 balance: cells[7].to_string(),
@@ -653,11 +653,42 @@ fn parse_clients_page(client_html: &String) -> (Vec<OrgClient>, bool) {
 
     (org_clients_page, next_page_exist)
 }
-
-struct FullName {
-    name: String,
+#[derive(Serialize)]
+pub struct FullName {
     last_name: String,
+    name: String,
     surname: String,
+}
+
+fn get_fullname(fullname: String) -> FullName{
+    
+    let mut full_name = FullName {
+        name: "".to_string(),
+        last_name: "".to_string(),
+        surname: "".to_string(),
+    };
+
+    let fullname = fullname.trim();
+    let arr: Vec<_> = fullname.split_whitespace().collect();
+
+    match arr.len() {
+            1 => full_name.last_name = arr[0].to_string(),
+            2 => {
+                full_name.last_name = arr[0].to_string();
+                full_name.name = arr[1].to_string();
+            }
+            3.. => {
+                full_name.last_name = arr[0].to_string();
+                full_name.name = arr[1].to_string();
+
+                let sur = &arr[2..];
+                let surname = sur.join(" ");
+                full_name.surname = surname;
+            }
+            _ => {}
+        }
+
+    return full_name;
 }
 
 fn convert_to_id_and_fullname(search: String) -> (i32, FullName) {
