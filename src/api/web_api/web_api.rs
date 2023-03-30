@@ -1,3 +1,6 @@
+#[path = "post.rs"]
+mod post;
+
 use axum::{
     debug_handler,
     extract::{self, Query},
@@ -49,16 +52,7 @@ pub async fn logout(Extension(clients): Extension<Clients>, Query(name): Query<N
 
     let _resp = client
         .post(AUTH_URL)
-        .form(&HashMap::from([
-            ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-            ("headerForm", "headerForm"),
-            ("autoScroll", ""),
-            ("javax.faces.ViewState", "j_id1"),
-            (
-                "headerForm:j_id_jsp_659141934_66",
-                "headerForm:j_id_jsp_659141934_66",
-            ),
-        ]))
+        .form(&HashMap::from(post::LOGOUT))
         .send()
         .await
         .unwrap();
@@ -148,36 +142,10 @@ async fn create_client_or_send_exist(name: &str, clients: &Clients) -> WebClient
 }
 
 async fn check_auth(web_client: &WebClient) -> bool {
-    let click_clients_list = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "mainMenuSubView:mainMenuForm:mainMenuselectedItemName",
-            "showClientListMenuItem",
-        ),
-        (
-            "panelMenuStatemainMenuSubView:mainMenuForm:clientGroupMenu",
-            "opened",
-        ),
-        (
-            "panelMenuActionmainMenuSubView:mainMenuForm:showClientListMenuItem",
-            "mainMenuSubView:mainMenuForm:showClientListMenuItem",
-        ),
-        (
-            "mainMenuSubView:mainMenuForm",
-            "mainMenuSubView:mainMenuForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        (
-            "mainMenuSubView:mainMenuForm:showClientListMenuItem",
-            "mainMenuSubView:mainMenuForm:showClientListMenuItem",
-        ),
-    ];
-
     let resp = web_client
         .client
         .post(SITE_URL)
-        .form(&HashMap::from(click_clients_list))
+        .form(&HashMap::from(post::CLICK_CLIENTS_LIST))
         .send()
         .await
         .unwrap();
@@ -225,48 +193,16 @@ pub async fn get_organizations(
 
     let client = &web_client.client;
 
-    let org_modal = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "workspaceSubView:workspaceForm",
-            "workspaceSubView:workspaceForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_6pc51",
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_6pc51",
-        ),
-    ];
-
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(org_modal))
+        .form(&HashMap::from(post::ORG_MODAL))
         .send()
         .await
         .unwrap();
 
-    let click_ou = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
-            "1",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm",
-            "orgSelectSubView:modalOrgSelectorForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_25pc22",
-        ),
-    ];
-
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(click_ou))
+        .form(&HashMap::from(post::CLICK_OPEN_ORG_POPUP))
         .send()
         .await
         .unwrap();
@@ -298,29 +234,12 @@ pub async fn get_organizations(
 }
 
 async fn click_on_org_page(number: i32, client: &Client) -> String {
-    let click_org_page = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        ("orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_5pc22", ""),
-        ("orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_12pc22", ""),
-        ("orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_15pc22", ""),
-        ("orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_18pc22", ""),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
-            "0",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm",
-            "orgSelectSubView:modalOrgSelectorForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        ("ajaxSingle", "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22",
-            &number.to_string(),
-        ),
-        ("AJAX:EVENTS_COUNT", "1"),
-    ];
+    let number = number.to_string();
+
+    let mut click_org_page = HashMap::from(post::CLICK_ORG_PAGE);
+    click_org_page
+        .entry("orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22")
+        .and_modify(|e| *e = &number);
 
     let resp = client
         .post(SITE_URL)
@@ -641,7 +560,7 @@ fn parse_clients_page(client_html: &String) -> (Vec<OrgClient>, bool) {
 
             let org_client = OrgClient {
                 id: cells[1].to_string(),
-                fullname: get_fullname(cells[3].to_string()), 
+                fullname: get_fullname(cells[3].to_string()),
                 group: cells[4].to_string(),
                 org: cells[6].to_string(),
                 balance: cells[7].to_string(),
@@ -660,8 +579,7 @@ pub struct FullName {
     surname: String,
 }
 
-fn get_fullname(fullname: String) -> FullName{
-    
+fn get_fullname(fullname: String) -> FullName {
     let mut full_name = FullName {
         name: "".to_string(),
         last_name: "".to_string(),
@@ -672,21 +590,21 @@ fn get_fullname(fullname: String) -> FullName{
     let arr: Vec<_> = fullname.split_whitespace().collect();
 
     match arr.len() {
-            1 => full_name.last_name = arr[0].to_string(),
-            2 => {
-                full_name.last_name = arr[0].to_string();
-                full_name.name = arr[1].to_string();
-            }
-            3.. => {
-                full_name.last_name = arr[0].to_string();
-                full_name.name = arr[1].to_string();
-
-                let sur = &arr[2..];
-                let surname = sur.join(" ");
-                full_name.surname = surname;
-            }
-            _ => {}
+        1 => full_name.last_name = arr[0].to_string(),
+        2 => {
+            full_name.last_name = arr[0].to_string();
+            full_name.name = arr[1].to_string();
         }
+        3.. => {
+            full_name.last_name = arr[0].to_string();
+            full_name.name = arr[1].to_string();
+
+            let sur = &arr[2..];
+            let surname = sur.join(" ");
+            full_name.surname = surname;
+        }
+        _ => {}
+    }
 
     return full_name;
 }
@@ -975,17 +893,6 @@ pub async fn download_all(
         ("workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51", "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51")
 
     ];
-
-    let resp = client
-        .post(SITE_URL)
-        .form(&HashMap::from(search_submit))
-        .send()
-        .await
-        .unwrap();
-
-    fs::write("0_search_submit.html", resp.text().await.unwrap())
-        .await
-        .unwrap();
 
     let clear_button = [
         ("AJAXREQUEST", "j_id_jsp_659141934_0"),
@@ -1427,11 +1334,11 @@ pub async fn download_all(
         ];
 
         let resp = client
-        .post(SITE_URL)
-        .form(&HashMap::from(next))
-        .send()
-        .await
-        .unwrap();
+            .post(SITE_URL)
+            .form(&HashMap::from(next))
+            .send()
+            .await
+            .unwrap();
 
         res = resp.text().await.unwrap();
     }

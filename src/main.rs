@@ -1,7 +1,7 @@
 #[path = "api/db_api.rs"]
 mod db_api;
 
-#[path = "api/web_api.rs"]
+#[path = "api/web_api/web_api.rs"]
 mod web_api;
 
 use axum::{
