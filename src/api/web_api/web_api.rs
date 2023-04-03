@@ -238,7 +238,7 @@ async fn click_on_org_page(number: i32, client: &Client) -> String {
 
     let mut click_org_page = HashMap::from(post::CLICK_ORG_PAGE);
     click_org_page
-        .entry("orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:j_id_jsp_685543358_39pc22")
+        .entry(post::CLICK_ORG_PAGE_KEY)
         .and_modify(|e| *e = &number);
 
     let resp = client
@@ -381,31 +381,9 @@ pub async fn init_search(
     let client = web_client.client;
     let _ = client.get(SITE_URL).send().await.unwrap();
 
-    let clear_button = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
-            "j_id_jsp_635818149_109pc51",
-        ),
-        (
-            "workspaceSubView:workspaceForm",
-            "workspaceSubView:workspaceForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_54pc51",
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_54pc51",
-        ),
-        (
-            "ajaxSingle",
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_54pc51",
-        ),
-    ];
-
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(clear_button))
+        .form(&HashMap::from(post::CLEAR_BUTTON))
         .send()
         .await
         .unwrap();
@@ -739,7 +717,6 @@ pub async fn download_all(
     Query(query): Query<Name>,
     extract::Json(payload): extract::Json<SearchQuery>,
 ) -> String {
-    dbg!("all");
     let mut web_client = create_client_or_send_exist(&query.login, &clients).await;
 
     if web_client.cookie.is_empty().not() {
@@ -762,163 +739,9 @@ pub async fn download_all(
     let client = web_client.client;
     let _ = client.get(SITE_URL).send().await.unwrap();
 
-    // AJAXREQUEST	"j_id_jsp_659141934_0"
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_1pc51	"true"
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_5pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_8pc51	"on"
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_14pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_16pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_18pc51	"-1"
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_28pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_32pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_36pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_38pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_40pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_43pc51	"0"
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_46pc51	"0"
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_49pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_51pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_107pc51	""
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51	"j_id_jsp_635818149_109pc51"
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_112pc51	"0,00"
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_126pc51	"0,00"
-    // workspaceSubView:workspaceForm:workspacePageSubView:removedClientDeletePanelOpenedState	""
-    // workspaceSubView:workspaceForm	"workspaceSubView:workspaceForm"
-    // autoScroll	""
-    // javax.faces.ViewState	"j_id1"
-    // workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51	"workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51"
-
-    let search_submit = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_1pc51",
-            "true",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_5pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_8pc51",
-            "on",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_14pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_16pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_18pc51",
-            "-1",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51",
-            "", //fam
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_28pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_32pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_38pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_40pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_43pc51",
-            "0",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_46pc51",
-            "0",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_49pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_51pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_51pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
-            "j_id_jsp_635818149_109pc51",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_112pc51",
-            "0,00",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_126pc51",
-            "0,00",
-        ),
-
-        ("workspaceSubView:workspaceForm:workspacePageSubView:removedClientDeletePanelOpenedState", 
-            "",
-        ),
-        ("workspaceSubView:workspaceForm", "workspaceSubView:workspaceForm"),
-        ("autoScroll", ""),
-
-        ("javax.faces.ViewState", "j_id1"),
-        ("workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51", "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51")
-
-    ];
-
-    let clear_button = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
-            "j_id_jsp_635818149_109pc51",
-        ),
-        (
-            "workspaceSubView:workspaceForm",
-            "workspaceSubView:workspaceForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_54pc51",
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_54pc51",
-        ),
-        (
-            "ajaxSingle",
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_54pc51",
-        ),
-    ];
-
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(clear_button))
+        .form(&HashMap::from(post::CLEAR_BUTTON))
         .send()
         .await
         .unwrap();
@@ -927,110 +750,13 @@ pub async fn download_all(
         .await
         .unwrap();
 
-    let open_org_selector = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_1pc51",
-            "true",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_5pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_8pc51",
-            "on",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_14pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_16pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_18pc51",
-            "-1",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51",
-            "", //fam
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_28pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_32pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_38pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_40pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_43pc51",
-            "0",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_46pc51",
-            "0",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_49pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_51pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_51pc51",
-            "",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
-            "j_id_jsp_635818149_109pc51",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_112pc51",
-            "0,00",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_126pc51",
-            "0,00",
-        ),
-
-        ("workspaceSubView:workspaceForm:workspacePageSubView:removedClientDeletePanelOpenedState", 
-            "",
-        ),
-        ("workspaceSubView:workspaceForm", "workspaceSubView:workspaceForm"),
-        ("autoScroll", ""),
-
-        ("javax.faces.ViewState", "j_id1"),
-        ("workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_6pc51", "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_6pc51")
-    ];
+    let mut search_form = HashMap::from(post::SEARCH_FORM);
+    search_form.remove(post::SUBMIT_SEARCH_KEY);
+    search_form.insert(post::OPEN_ORG_SEARCH_KEY, post::OPEN_ORG_SEARCH_KEY);
 
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(open_org_selector))
+        .form(&search_form)
         .send()
         .await
         .unwrap();
@@ -1039,57 +765,16 @@ pub async fn download_all(
         .await
         .unwrap();
 
-    // AJAXREQUEST	"j_id_jsp_659141934_0"
-    // orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_5pc22	""
-    // orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_12pc22	""
-    // orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_15pc22	""
-    // orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_18pc22	"858"
-    // orgSelectSubView:modalOrgSelectorForm:regionsList	""
-    // orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22	"0"
-    // orgSelectSubView:modalOrgSelectorForm	"orgSelectSubView:modalOrgSelectorForm"
-    // autoScroll	""
-    // javax.faces.ViewState	"j_id2"
-    // orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_19pc22	"orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_19pc22"
-    // AJAX:EVENTS_COUNT	"5"
+    let org_id = payload.school_id.to_string();
 
-    let set_filter = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_5pc22",
-            "",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_12pc22",
-            "",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_15pc22",
-            "",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_18pc22",
-            "879",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
-            "",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm",
-            "orgSelectSubView:modalOrgSelectorForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_19pc22",
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_19pc22",
-        ),
-        ("AJAX:EVENTS_COUNT", "1"),
-    ];
+    let mut set_filter = HashMap::from(post::ORG_FILTER);
+    set_filter
+        .entry(post::ORG_FILTER_BY_ID_KEY)
+        .and_modify(|e| *e = &org_id);
 
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(set_filter))
+        .form(&set_filter)
         .send()
         .await
         .unwrap();
@@ -1098,43 +783,14 @@ pub async fn download_all(
         .await
         .unwrap();
 
-    let click_table_element = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_5pc22",
-            "",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_12pc22",
-            "",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_15pc22",
-            "",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_18pc22",
-            "879",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
-            "",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm",
-            "orgSelectSubView:modalOrgSelectorForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:0:j_id_jsp_685543358_32pc22",
-            "orgSelectSubView:modalOrgSelectorForm:modalOrgSelectorOrgTable:0:j_id_jsp_685543358_32pc22",
-        ),
-    ];
+    set_filter.remove(post::ORG_MODAL_FILTER_KEY);
+    set_filter.remove(post::AJAX_EVENTS_COUNT_KEY);
+
+    set_filter.insert(post::FIRST_TABLE_ROW_KEY, post::FIRST_TABLE_ROW_KEY);
 
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(click_table_element))
+        .form(&set_filter)
         .send()
         .await
         .unwrap();
@@ -1143,55 +799,12 @@ pub async fn download_all(
         .await
         .unwrap();
 
-    // AJAXREQUEST	"j_id_jsp_659141934_0"
-    // orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_5pc22	"Демо школа"
-    // orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_12pc22	""
-    // orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_15pc22	""
-    // orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_18pc22	"858"
-    // orgSelectSubView:modalOrgSelectorForm:regionsList	""
-    // orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22	"0"
-    // orgSelectSubView:modalOrgSelectorForm	"orgSelectSubView:modalOrgSelectorForm"
-    // autoScroll	""
-    // javax.faces.ViewState	"j_id2"
-    // orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22	"orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22"
-
-    let submit_selected_row = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_5pc22",
-            "",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_12pc22",
-            "",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_15pc22",
-            "",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_18pc22",
-            "879",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_24pc22",
-            "",
-        ),
-        (
-            "orgSelectSubView:modalOrgSelectorForm",
-            "orgSelectSubView:modalOrgSelectorForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        (
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22",
-            "orgSelectSubView:modalOrgSelectorForm:j_id_jsp_685543358_43pc22",
-        ),
-    ];
+    set_filter.remove(post::FIRST_TABLE_ROW_KEY);
+    set_filter.insert(post::SUBMIT_SELECTED_ROW, post::SUBMIT_SELECTED_ROW);
 
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(submit_selected_row))
+        .form(&set_filter)
         .send()
         .await
         .unwrap();
@@ -1202,7 +815,7 @@ pub async fn download_all(
 
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(search_submit))
+        .form(&HashMap::from(post::SEARCH_FORM))
         .send()
         .await
         .unwrap();
@@ -1215,6 +828,11 @@ pub async fn download_all(
 
     let mut clienst_list: Vec<OrgClient> = vec![];
 
+    search_form.insert(post::NEXT_SEARCH_PAGE_KEY, "next");
+    search_form.insert("ajaxSingle", post::NEXT_SEARCH_PAGE_KEY);
+    search_form.insert(post::AJAX_EVENTS_COUNT_KEY, "1");
+    search_form.insert(post::SUBMIT_SEARCH_KEY, post::SUBMIT_SEARCH_KEY);
+
     loop {
         let (part_clients, next_page_exist) = parse_clients_page(&res);
         clienst_list.extend(part_clients);
@@ -1222,120 +840,9 @@ pub async fn download_all(
             break;
         }
 
-        let next = [
-            ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_1pc51",
-                "true",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_5pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_8pc51",
-                "on",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_14pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_16pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_18pc51",
-                "-1",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51",
-                "", //fam
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_28pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_32pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_38pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_40pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_43pc51",
-                "0",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_46pc51",
-                "0",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_49pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_51pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_51pc51",
-                "",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
-                "j_id_jsp_635818149_109pc51",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_112pc51",
-                "0,00",
-            ),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_126pc51",
-                "0,00",
-            ),
-
-            ("workspaceSubView:workspaceForm:workspacePageSubView:removedClientDeletePanelOpenedState", 
-                "",
-            ),
-            ("workspaceSubView:workspaceForm", "workspaceSubView:workspaceForm"),
-            ("autoScroll", ""),
-
-            ("javax.faces.ViewState", "j_id1"),
-            (
-                "workspaceSubView:workspaceForm:workspacePageSubView:clientListTable:j_id_jsp_635818149_104pc51", 
-                "next",
-            ),
-            (
-                "ajaxSingle",	
-                "workspaceSubView:workspaceForm:workspacePageSubView:clientListTable:j_id_jsp_635818149_104pc51",
-            ),
-            ("AJAX:EVENTS_COUNT", "1"),
-            
-            ("workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51", "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51"),
-        ];
-
         let resp = client
             .post(SITE_URL)
-            .form(&HashMap::from(next))
+            .form(&search_form)
             .send()
             .await
             .unwrap();
