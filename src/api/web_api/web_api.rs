@@ -358,7 +358,6 @@ pub async fn init_search(
     Query(query): Query<Name>,
     extract::Json(payload): extract::Json<SearchQuery>,
 ) -> String {
-    dbg!("init_search");
     let mut web_client = create_client_or_send_exist(&query.login, &clients).await;
 
     if web_client.cookie.is_empty().not() {
@@ -381,6 +380,7 @@ pub async fn init_search(
     let client = web_client.client;
     let _ = client.get(SITE_URL).send().await.unwrap();
 
+    //**
     let resp = client
         .post(SITE_URL)
         .form(&HashMap::from(post::CLEAR_BUTTON))
@@ -388,86 +388,173 @@ pub async fn init_search(
         .await
         .unwrap();
 
-    let id_str = &id.to_string();
+    fs::write("1_clear_button.html", resp.text().await.unwrap())
+        .await
+        .unwrap();
 
-    let search_param = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_1pc51",
-            "true",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_8pc51",
-            "on",
-        ),
-        (
-            //Показывать удалённых
-            "workspaceSubView:workspaceForm:workspacePageSubView:showDeletedClients",
-            if payload.deleted { "on" } else { "" }, //"on",
-        ),
-        (
-            //ID
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51",
-            if id == 0 { "" } else { id_str },
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_18pc51",
-            "-1",
-        ),
-        (
-            //Фамилия
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51",
-            full_name.last_name.as_str(),
-        ),
-        (
-            //Имя
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51",
-            full_name.name.as_str(),
-        ),
-        (
-            //Отчество
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51",
-            full_name.surname.as_str(),
-        ),
-        (
-            //0 не важно наличе карт
-            //1 есть карты
-            //2 нет карт
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_43pc51",
-            //&search_request.cards.to_string(),
-            "0",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_46pc51",
-            "0",
-        ),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
-            "j_id_jsp_635818149_109pc51",
-        ),
-        (
-            "workspaceSubView:workspaceForm",
-            "workspaceSubView:workspaceForm",
-        ),
-        ("javax.faces.ViewState", "j_id1"),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51",
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51",
-        ),
-    ];
+    let mut search_form = HashMap::from(post::SEARCH_FORM);
+
+    if payload.school_id != 0 {
+        search_form.remove(post::SUBMIT_SEARCH_KEY);
+        search_form.insert(post::OPEN_ORG_SEARCH_KEY, post::OPEN_ORG_SEARCH_KEY);
+
+        let resp = client
+            .post(SITE_URL)
+            .form(&search_form)
+            .send()
+            .await
+            .unwrap();
+
+        fs::write("2_open_org_selector.html", resp.text().await.unwrap())
+            .await
+            .unwrap();
+
+        let org_id = payload.school_id.to_string();
+
+        let mut set_filter = HashMap::from(post::ORG_FILTER);
+        set_filter
+            .entry(post::ORG_FILTER_BY_ID_KEY)
+            .and_modify(|e| *e = &org_id);
+
+        let resp = client
+            .post(SITE_URL)
+            .form(&set_filter)
+            .send()
+            .await
+            .unwrap();
+
+        fs::write("3_set_filter.html", resp.text().await.unwrap())
+            .await
+            .unwrap();
+
+        set_filter.remove(post::ORG_MODAL_FILTER_KEY);
+        set_filter.remove(post::AJAX_EVENTS_COUNT_KEY);
+
+        set_filter.insert(post::FIRST_TABLE_ROW_KEY, post::FIRST_TABLE_ROW_KEY);
+
+        let resp = client
+            .post(SITE_URL)
+            .form(&set_filter)
+            .send()
+            .await
+            .unwrap();
+
+        fs::write("4_click_table_element.html", resp.text().await.unwrap())
+            .await
+            .unwrap();
+
+        set_filter.remove(post::FIRST_TABLE_ROW_KEY);
+        set_filter.insert(post::SUBMIT_SELECTED_ROW, post::SUBMIT_SELECTED_ROW);
+
+        let resp = client
+            .post(SITE_URL)
+            .form(&set_filter)
+            .send()
+            .await
+            .unwrap();
+
+        fs::write("5_submit_selected_row.html", resp.text().await.unwrap())
+            .await
+            .unwrap();
+    }
+
+    search_form.insert(post::AJAX_EVENTS_COUNT_KEY, "1");
+    search_form.insert(post::SUBMIT_SEARCH_KEY, post::SUBMIT_SEARCH_KEY);
+
+    search_form
+        .entry(post::FULL_NAME_KEY)
+        .and_modify(|e| *e = &full_name.last_name);
 
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(search_param))
+        .form(&search_form)
         .send()
         .await
         .unwrap();
+
+    let mut res = resp.text().await.unwrap();
+    fs::write("6_search_submit.html", &res).await.unwrap();
+
+    // let id_str = &id.to_string();
+
+    // let search_param = [
+    //     ("AJAXREQUEST", "j_id_jsp_659141934_0"),
+    //     (
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_1pc51",
+    //         "true",
+    //     ),
+    //     (
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_8pc51",
+    //         "on",
+    //     ),
+    //     (
+    //         //Показывать удалённых
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:showDeletedClients",
+    //         if payload.deleted { "on" } else { "" }, //"on",
+    //     ),
+    //     (
+    //         //ID
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51",
+    //         if id == 0 { "" } else { id_str },
+    //     ),
+    //     (
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_18pc51",
+    //         "-1",
+    //     ),
+    //     (
+    //         //Фамилия
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51",
+    //         full_name.last_name.as_str(),
+    //     ),
+    //     (
+    //         //Имя
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51",
+    //         full_name.name.as_str(),
+    //     ),
+    //     (
+    //         //Отчество
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51",
+    //         full_name.surname.as_str(),
+    //     ),
+    //     (
+    //         //0 не важно наличе карт
+    //         //1 есть карты
+    //         //2 нет карт
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_43pc51",
+    //         //&search_request.cards.to_string(),
+    //         "0",
+    //     ),
+    //     (
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_46pc51",
+    //         "0",
+    //     ),
+    //     (
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
+    //         "j_id_jsp_635818149_109pc51",
+    //     ),
+    //     (
+    //         "workspaceSubView:workspaceForm",
+    //         "workspaceSubView:workspaceForm",
+    //     ),
+    //     ("javax.faces.ViewState", "j_id1"),
+    //     (
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51",
+    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51",
+    //     ),
+    // ];
+
+    // let resp = client
+    //     .post(SITE_URL)
+    //     .form(&HashMap::from(search_param))
+    //     .send()
+    //     .await
+    //     .unwrap();
 
     // fs::write("search_res.html", resp.text().await.unwrap())
     //     .await
     //     .unwrap();
 
-    let org_client_page = resp.text().await.unwrap();
+    let org_client_page = res;
     let (org_clients, next_page_exist): (Vec<OrgClient>, bool) =
         parse_clients_page(&org_client_page);
 

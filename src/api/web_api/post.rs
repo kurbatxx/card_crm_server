@@ -131,7 +131,7 @@ pub static SEARCH_FORM: [(&str, &str); 28] = [
         "-1",
     ),
     (
-        "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51",
+        FULL_NAME_KEY,
         "", //fam
     ),
     (
@@ -278,3 +278,6 @@ pub static SUBMIT_SELECTED_ROW: &str =
 pub static NEXT_SEARCH_PAGE_KEY: &str = "workspaceSubView:workspaceForm:workspacePageSubView:clientListTable:j_id_jsp_635818149_104pc51";
 
 pub static AJAX_EVENTS_COUNT_KEY: &str = "AJAX:EVENTS_COUNT";
+
+pub static FULL_NAME_KEY: &str =
+    "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51";
