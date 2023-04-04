@@ -43,10 +43,7 @@ pub static ORG_MODAL: [(&str, &str); 5] = [
     ),
     ("autoScroll", ""),
     ("javax.faces.ViewState", "j_id1"),
-    (
-        "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_6pc51",
-        "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_6pc51",
-    ),
+    (OPEN_ORG_SEARCH_KEY, OPEN_ORG_SEARCH_KEY),
 ];
 
 pub static CLICK_OPEN_ORG_POPUP: [(&str, &str); 6] = [
@@ -114,10 +111,7 @@ pub static SEARCH_FORM: [(&str, &str); 28] = [
         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_8pc51",
         "on",
     ),
-    (
-        "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51",
-        "",
-    ),
+    (SEARCH_ID_KEY, ""),
     (
         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_14pc51",
         "",
@@ -130,26 +124,17 @@ pub static SEARCH_FORM: [(&str, &str); 28] = [
         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_18pc51",
         "-1",
     ),
-    (
-        FULL_NAME_KEY,
-        "", //fam
-    ),
+    (LAST_NAME_KEY, ""),
     (
         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_28pc51",
         "",
     ),
-    (
-        "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51",
-        "",
-    ),
+    (NAME_KEY, ""),
     (
         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_32pc51",
         "",
     ),
-    (
-        "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51",
-        "",
-    ),
+    (SURNAME_KEY, ""),
     (
         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_38pc51",
         "",
@@ -279,5 +264,17 @@ pub static NEXT_SEARCH_PAGE_KEY: &str = "workspaceSubView:workspaceForm:workspac
 
 pub static AJAX_EVENTS_COUNT_KEY: &str = "AJAX:EVENTS_COUNT";
 
-pub static FULL_NAME_KEY: &str =
+pub static SEARCH_ID_KEY: &str =
+    "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51";
+
+pub static LAST_NAME_KEY: &str =
     "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51";
+
+pub static NAME_KEY: &str =
+    "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51";
+
+pub static SURNAME_KEY: &str =
+    "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51";
+
+pub static SHOW_DELETED_KEY: &str =
+    "workspaceSubView:workspaceForm:workspacePageSubView:showDeletedClients";

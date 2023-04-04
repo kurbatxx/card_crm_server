@@ -392,19 +392,37 @@ pub async fn init_search(
         .await
         .unwrap();
 
-    let org_id = payload.school_id.to_string();
     let mut search_form = HashMap::from(post::SEARCH_FORM);
 
-    if payload.school_id != 0 {
-        search_form = set_org_filter(&org_id, search_form, &client).await;
+    let id_str = id.to_string();
+    if id != 0 {
+        search_form
+            .entry(post::SEARCH_ID_KEY)
+            .and_modify(|e| *e = &id_str);
+    } else {
+        if payload.school_id != 0 {
+            let org_id = payload.school_id.to_string();
+            search_form = set_org_filter(&org_id, search_form, &client).await;
+        }
+
+        if payload.deleted {
+            search_form.insert(post::SHOW_DELETED_KEY, "on");
+        } else {
+            search_form.remove(post::SHOW_DELETED_KEY);
+        }
+
+        search_form
+            .entry(post::LAST_NAME_KEY)
+            .and_modify(|e| *e = &full_name.last_name);
+
+        search_form
+            .entry(post::NAME_KEY)
+            .and_modify(|e| *e = &full_name.name);
+
+        search_form
+            .entry(post::SURNAME_KEY)
+            .and_modify(|e| *e = &full_name.surname);
     }
-
-    search_form.insert(post::AJAX_EVENTS_COUNT_KEY, "1");
-    search_form.insert(post::SUBMIT_SEARCH_KEY, post::SUBMIT_SEARCH_KEY);
-
-    search_form
-        .entry(post::FULL_NAME_KEY)
-        .and_modify(|e| *e = &full_name.last_name);
 
     let resp = client
         .post(SITE_URL)
@@ -415,8 +433,6 @@ pub async fn init_search(
 
     let res = resp.text().await.unwrap();
     fs::write("6_search_submit.html", &res).await.unwrap();
-
-    // let id_str = &id.to_string();
 
     // let search_param = [
     //     ("AJAXREQUEST", "j_id_jsp_659141934_0"),
@@ -762,8 +778,6 @@ pub async fn download_all(
     let web_client = create_client_or_send_exist(&query.login, &clients).await;
     dbg!(&web_client.search_query);
 
-    let (id, full_name) = convert_to_id_and_fullname(payload.search.to_string());
-
     let client = web_client.client;
     let _ = client.get(SITE_URL).send().await.unwrap();
 
@@ -789,13 +803,12 @@ pub async fn download_all(
 
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(post::SEARCH_FORM))
+        .form(&search_form)
         .send()
         .await
         .unwrap();
 
     let mut res = resp.text().await.unwrap();
-
     fs::write("6_search_submit.html", &res).await.unwrap();
 
     //Первая страница с фильтром..
@@ -804,8 +817,6 @@ pub async fn download_all(
 
     search_form.insert(post::NEXT_SEARCH_PAGE_KEY, "next");
     search_form.insert("ajaxSingle", post::NEXT_SEARCH_PAGE_KEY);
-    search_form.insert(post::AJAX_EVENTS_COUNT_KEY, "1");
-    search_form.insert(post::SUBMIT_SEARCH_KEY, post::SUBMIT_SEARCH_KEY);
 
     loop {
         let (part_clients, next_page_exist) = parse_clients_page(&res);
@@ -844,6 +855,8 @@ async fn set_org_filter<'a>(
         .send()
         .await
         .unwrap();
+
+    search_form.remove(post::OPEN_ORG_SEARCH_KEY);
 
     fs::write("2_open_org_selector.html", resp.text().await.unwrap())
         .await
@@ -894,6 +907,9 @@ async fn set_org_filter<'a>(
     fs::write("5_submit_selected_row.html", resp.text().await.unwrap())
         .await
         .unwrap();
+
+    search_form.insert(post::AJAX_EVENTS_COUNT_KEY, "1");
+    search_form.insert(post::SUBMIT_SEARCH_KEY, post::SUBMIT_SEARCH_KEY);
 
     search_form
 }
