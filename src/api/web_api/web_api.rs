@@ -392,70 +392,11 @@ pub async fn init_search(
         .await
         .unwrap();
 
+    let org_id = payload.school_id.to_string();
     let mut search_form = HashMap::from(post::SEARCH_FORM);
 
     if payload.school_id != 0 {
-        search_form.remove(post::SUBMIT_SEARCH_KEY);
-        search_form.insert(post::OPEN_ORG_SEARCH_KEY, post::OPEN_ORG_SEARCH_KEY);
-
-        let resp = client
-            .post(SITE_URL)
-            .form(&search_form)
-            .send()
-            .await
-            .unwrap();
-
-        fs::write("2_open_org_selector.html", resp.text().await.unwrap())
-            .await
-            .unwrap();
-
-        let org_id = payload.school_id.to_string();
-
-        let mut set_filter = HashMap::from(post::ORG_FILTER);
-        set_filter
-            .entry(post::ORG_FILTER_BY_ID_KEY)
-            .and_modify(|e| *e = &org_id);
-
-        let resp = client
-            .post(SITE_URL)
-            .form(&set_filter)
-            .send()
-            .await
-            .unwrap();
-
-        fs::write("3_set_filter.html", resp.text().await.unwrap())
-            .await
-            .unwrap();
-
-        set_filter.remove(post::ORG_MODAL_FILTER_KEY);
-        set_filter.remove(post::AJAX_EVENTS_COUNT_KEY);
-
-        set_filter.insert(post::FIRST_TABLE_ROW_KEY, post::FIRST_TABLE_ROW_KEY);
-
-        let resp = client
-            .post(SITE_URL)
-            .form(&set_filter)
-            .send()
-            .await
-            .unwrap();
-
-        fs::write("4_click_table_element.html", resp.text().await.unwrap())
-            .await
-            .unwrap();
-
-        set_filter.remove(post::FIRST_TABLE_ROW_KEY);
-        set_filter.insert(post::SUBMIT_SELECTED_ROW, post::SUBMIT_SELECTED_ROW);
-
-        let resp = client
-            .post(SITE_URL)
-            .form(&set_filter)
-            .send()
-            .await
-            .unwrap();
-
-        fs::write("5_submit_selected_row.html", resp.text().await.unwrap())
-            .await
-            .unwrap();
+        search_form = set_org_filter(&org_id, search_form, &client).await;
     }
 
     search_form.insert(post::AJAX_EVENTS_COUNT_KEY, "1");
@@ -472,7 +413,7 @@ pub async fn init_search(
         .await
         .unwrap();
 
-    let mut res = resp.text().await.unwrap();
+    let res = resp.text().await.unwrap();
     fs::write("6_search_submit.html", &res).await.unwrap();
 
     // let id_str = &id.to_string();
@@ -838,6 +779,62 @@ pub async fn download_all(
         .unwrap();
 
     let mut search_form = HashMap::from(post::SEARCH_FORM);
+
+    if payload.school_id == 0 {
+        return "Не выбрана организация".to_string();
+    }
+
+    let org_id = payload.school_id.to_string();
+    search_form = set_org_filter(&org_id, search_form, &client).await;
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&HashMap::from(post::SEARCH_FORM))
+        .send()
+        .await
+        .unwrap();
+
+    let mut res = resp.text().await.unwrap();
+
+    fs::write("6_search_submit.html", &res).await.unwrap();
+
+    //Первая страница с фильтром..
+
+    let mut clienst_list: Vec<OrgClient> = vec![];
+
+    search_form.insert(post::NEXT_SEARCH_PAGE_KEY, "next");
+    search_form.insert("ajaxSingle", post::NEXT_SEARCH_PAGE_KEY);
+    search_form.insert(post::AJAX_EVENTS_COUNT_KEY, "1");
+    search_form.insert(post::SUBMIT_SEARCH_KEY, post::SUBMIT_SEARCH_KEY);
+
+    loop {
+        let (part_clients, next_page_exist) = parse_clients_page(&res);
+        clienst_list.extend(part_clients);
+        if next_page_exist.not() {
+            break;
+        }
+
+        let resp = client
+            .post(SITE_URL)
+            .form(&search_form)
+            .send()
+            .await
+            .unwrap();
+
+        res = resp.text().await.unwrap();
+    }
+
+    let res = serde_json::to_string(&clienst_list).unwrap();
+    fs::write("all.json", &res).await.unwrap();
+
+    "complete".to_string()
+}
+
+async fn set_org_filter<'a>(
+    org_id: &str,
+    mut search_form: HashMap<&'a str, &'a str>,
+    client: &Client,
+) -> HashMap<&'a str, &'a str> {
     search_form.remove(post::SUBMIT_SEARCH_KEY);
     search_form.insert(post::OPEN_ORG_SEARCH_KEY, post::OPEN_ORG_SEARCH_KEY);
 
@@ -851,8 +848,6 @@ pub async fn download_all(
     fs::write("2_open_org_selector.html", resp.text().await.unwrap())
         .await
         .unwrap();
-
-    let org_id = payload.school_id.to_string();
 
     let mut set_filter = HashMap::from(post::ORG_FILTER);
     set_filter
@@ -900,45 +895,5 @@ pub async fn download_all(
         .await
         .unwrap();
 
-    let resp = client
-        .post(SITE_URL)
-        .form(&HashMap::from(post::SEARCH_FORM))
-        .send()
-        .await
-        .unwrap();
-
-    let mut res = resp.text().await.unwrap();
-
-    fs::write("6_search_submit.html", &res).await.unwrap();
-
-    //Первая страница с фильтром..
-
-    let mut clienst_list: Vec<OrgClient> = vec![];
-
-    search_form.insert(post::NEXT_SEARCH_PAGE_KEY, "next");
-    search_form.insert("ajaxSingle", post::NEXT_SEARCH_PAGE_KEY);
-    search_form.insert(post::AJAX_EVENTS_COUNT_KEY, "1");
-    search_form.insert(post::SUBMIT_SEARCH_KEY, post::SUBMIT_SEARCH_KEY);
-
-    loop {
-        let (part_clients, next_page_exist) = parse_clients_page(&res);
-        clienst_list.extend(part_clients);
-        if next_page_exist.not() {
-            break;
-        }
-
-        let resp = client
-            .post(SITE_URL)
-            .form(&search_form)
-            .send()
-            .await
-            .unwrap();
-
-        res = resp.text().await.unwrap();
-    }
-
-    let res = serde_json::to_string(&clienst_list).unwrap();
-    fs::write("all.json", &res).await.unwrap();
-
-    "complete".to_string()
+    search_form
 }
