@@ -19,6 +19,22 @@ use crate::Clients;
 const SITE_URL: &str = "https://bilim.integro.kz:8181/processor/back-office/index.faces";
 const AUTH_URL: &str = "https://bilim.integro.kz:8181/processor/back-office/j_security_check";
 
+enum Cards {
+    NoSelected,
+    WithCards,
+    NoCards,
+}
+
+impl Cards {
+    fn value(&self) -> &str {
+        match *self {
+            Cards::NoSelected => "0",
+            Cards::WithCards => "1",
+            Cards::NoCards => "2",
+        }
+    }
+}
+
 #[derive(Deserialize)]
 pub struct AccessData {
     pub login: String,
@@ -317,21 +333,6 @@ fn check_first_org(org_html: &String) -> bool {
     }
 }
 
-// fn check_next_org_page(org_html: &String) -> bool {
-//     let button_table = button_table_dom(org_html);
-//     let dom = tl::parse(&button_table, tl::ParserOptions::default()).unwrap();
-//     //let parser = dom.parser();
-//     let td: Vec<NodeHandle> = dom
-//         .query_selector(".dr-dscr-button.rich-datascr-button")
-//         .unwrap()
-//         .collect();
-
-//     if td.len() == 1 {
-//         return false;
-//     }
-//     true
-// }
-
 fn button_table_dom(org_html: &String) -> String {
     let dom = tl::parse(&org_html, tl::ParserOptions::default()).unwrap();
     let parser = dom.parser();
@@ -349,8 +350,8 @@ fn button_table_dom(org_html: &String) -> String {
 #[derive(Deserialize, Debug, Clone)]
 pub struct SearchQuery {
     pub search: String,
-    pub school_id: i32,
-    pub deleted: bool,
+    pub org_id: i32,
+    pub show_deleted: bool,
 }
 
 pub async fn init_search(
@@ -400,12 +401,12 @@ pub async fn init_search(
             .entry(post::SEARCH_ID_KEY)
             .and_modify(|e| *e = &id_str);
     } else {
-        if payload.school_id != 0 {
-            let org_id = payload.school_id.to_string();
+        if payload.org_id != 0 {
+            let org_id = payload.org_id.to_string();
             search_form = set_org_filter(&org_id, search_form, &client).await;
         }
 
-        if payload.deleted {
+        if payload.show_deleted {
             search_form.insert(post::SHOW_DELETED_KEY, "on");
         } else {
             search_form.remove(post::SHOW_DELETED_KEY);
@@ -433,83 +434,6 @@ pub async fn init_search(
 
     let res = resp.text().await.unwrap();
     fs::write("6_search_submit.html", &res).await.unwrap();
-
-    // let search_param = [
-    //     ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-    //     (
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_1pc51",
-    //         "true",
-    //     ),
-    //     (
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_8pc51",
-    //         "on",
-    //     ),
-    //     (
-    //         //Показывать удалённых
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:showDeletedClients",
-    //         if payload.deleted { "on" } else { "" }, //"on",
-    //     ),
-    //     (
-    //         //ID
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_12pc51",
-    //         if id == 0 { "" } else { id_str },
-    //     ),
-    //     (
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_18pc51",
-    //         "-1",
-    //     ),
-    //     (
-    //         //Фамилия
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_26pc51",
-    //         full_name.last_name.as_str(),
-    //     ),
-    //     (
-    //         //Имя
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_30pc51",
-    //         full_name.name.as_str(),
-    //     ),
-    //     (
-    //         //Отчество
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_34pc51",
-    //         full_name.surname.as_str(),
-    //     ),
-    //     (
-    //         //0 не важно наличе карт
-    //         //1 есть карты
-    //         //2 нет карт
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_43pc51",
-    //         //&search_request.cards.to_string(),
-    //         "0",
-    //     ),
-    //     (
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_46pc51",
-    //         "0",
-    //     ),
-    //     (
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
-    //         "j_id_jsp_635818149_109pc51",
-    //     ),
-    //     (
-    //         "workspaceSubView:workspaceForm",
-    //         "workspaceSubView:workspaceForm",
-    //     ),
-    //     ("javax.faces.ViewState", "j_id1"),
-    //     (
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51",
-    //         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_53pc51",
-    //     ),
-    // ];
-
-    // let resp = client
-    //     .post(SITE_URL)
-    //     .form(&HashMap::from(search_param))
-    //     .send()
-    //     .await
-    //     .unwrap();
-
-    // fs::write("search_res.html", resp.text().await.unwrap())
-    //     .await
-    //     .unwrap();
 
     let org_client_page = res;
     let (org_clients, next_page_exist): (Vec<OrgClient>, bool) =
@@ -756,12 +680,19 @@ fn check_next_page(html: &String) -> bool {
     next_page_exist
 }
 
+#[derive(Deserialize, Debug, Clone)]
+pub struct FullDownloadQuery {
+    pub org_id: i32,
+    pub cards: i32,
+    pub show_deleted: bool,
+}
+
 pub async fn download_all(
     Extension(clients): Extension<Clients>,
     Query(query): Query<Name>,
-    extract::Json(payload): extract::Json<SearchQuery>,
+    extract::Json(payload): extract::Json<FullDownloadQuery>,
 ) -> String {
-    let mut web_client = create_client_or_send_exist(&query.login, &clients).await;
+    let web_client = create_client_or_send_exist(&query.login, &clients).await;
 
     if web_client.cookie.is_empty().not() {
         if check_auth(&web_client).await.not() {
@@ -769,14 +700,14 @@ pub async fn download_all(
         }
     }
 
-    web_client.search_query = Some(payload.clone());
-    clients
-        .write()
-        .await
-        .insert(query.login.clone(), web_client);
+    //web_client.search_query = Some(payload.clone());
+    // clients
+    //     .write()
+    //     .await
+    //     .insert(query.login.clone(), web_client);
 
-    let web_client = create_client_or_send_exist(&query.login, &clients).await;
-    dbg!(&web_client.search_query);
+    // let web_client = create_client_or_send_exist(&query.login, &clients).await;
+    // dbg!(&web_client.search_query);
 
     let client = web_client.client;
     let _ = client.get(SITE_URL).send().await.unwrap();
@@ -794,12 +725,17 @@ pub async fn download_all(
 
     let mut search_form = HashMap::from(post::SEARCH_FORM);
 
-    if payload.school_id == 0 {
+    if payload.org_id == 0 {
         return "Не выбрана организация".to_string();
     }
 
-    let org_id = payload.school_id.to_string();
+    let org_id = payload.org_id.to_string();
     search_form = set_org_filter(&org_id, search_form, &client).await;
+
+    let card_selector = payload.cards.to_string();
+    search_form
+        .entry(post::CARDS_KEY)
+        .and_modify(|e| *e = &card_selector);
 
     let resp = client
         .post(SITE_URL)

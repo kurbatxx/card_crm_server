@@ -144,8 +144,7 @@ pub static SEARCH_FORM: [(&str, &str); 28] = [
         "",
     ),
     (
-        "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_43pc51",
-        "0",
+        CARDS_KEY, "0",
     ),
     (
         "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_46pc51",
@@ -278,3 +277,6 @@ pub static SURNAME_KEY: &str =
 
 pub static SHOW_DELETED_KEY: &str =
     "workspaceSubView:workspaceForm:workspacePageSubView:showDeletedClients";
+
+pub static CARDS_KEY: &str =
+    "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_43pc51";
