@@ -28,7 +28,8 @@ POST {{server_url}}/search?login={{name}} HTTP/1.1
 content-type: application/json
 
 {
-    "search": "28706737",
+    //28706737
+    "search": "",
     "org_id": 0,
     "show_deleted" : false
 }
@@ -46,3 +47,7 @@ content-type: application/json
 ###
 @page_num = 2
 POST {{server_url}}/search_page?login={{name}}&page_number={{page_num}} HTTP/1.1
+
+###
+@num = 5
+POST {{server_url}}/person_info?login={{name}}&num={{num}} HTTP/1.1

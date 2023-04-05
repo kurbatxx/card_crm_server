@@ -612,32 +612,15 @@ pub async fn set_search_page(
 
     let client = web_client.client;
 
-    let click_bottom_number = [
-        ("AJAXREQUEST", "j_id_jsp_659141934_0"),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:j_id_jsp_635818149_108pc51",
-            "j_id_jsp_635818149_109pc51",
-        ),
-        (
-            "workspaceSubView:workspaceForm",
-            "workspaceSubView:workspaceForm",
-        ),
-        ("autoScroll", ""),
-        ("javax.faces.ViewState", "j_id1"),
-        (
-            "workspaceSubView:workspaceForm:workspacePageSubView:clientListTable:j_id_jsp_635818149_104pc51",
-            &query.page_number,
-        ),
-        (
-            "ajaxSingle",
-            "workspaceSubView:workspaceForm:workspacePageSubView:clientListTable:j_id_jsp_635818149_104pc51",
-        ),
-        ("AJAX:EVENTS_COUNT", "1"),
-    ];
+    let mut click_bottom_number = HashMap::from(post::CLICK_SEARCH_BOTTOM_NUMBER);
+
+    click_bottom_number
+        .entry(post::BOTTOM_NUMBER_KEY)
+        .and_modify(|e| *e = &query.page_number);
 
     let resp = client
         .post(SITE_URL)
-        .form(&HashMap::from(click_bottom_number))
+        .form(&click_bottom_number)
         .send()
         .await
         .unwrap();
@@ -848,4 +831,71 @@ async fn set_org_filter<'a>(
     search_form.insert(post::SUBMIT_SEARCH_KEY, post::SUBMIT_SEARCH_KEY);
 
     search_form
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct QueryPerson {
+    login: String,
+    num: u32,
+}
+
+pub async fn person_info(
+    Extension(clients): Extension<Clients>,
+    Query(query): Query<QueryPerson>,
+) -> String {
+    let web_client = create_client_or_send_exist(&query.login, &clients).await;
+
+    if web_client.cookie.is_empty().not() {
+        if check_auth(&web_client).await.not() {
+            return "Не авторизован".to_string();
+        }
+    }
+
+    let client = web_client.client;
+
+    let mut search_form = HashMap::from(post::SEARCH_FORM);
+    search_form.remove(post::SUBMIT_SEARCH_KEY);
+
+    let table_row_key = format!("workspaceSubView:workspaceForm:workspacePageSubView:clientListTable:{}:j_id_jsp_635818149_64pc51", &query.num);
+    search_form.insert(&table_row_key, &table_row_key);
+
+    let resp = client
+        .post(SITE_URL)
+        .form(&search_form)
+        .send()
+        .await
+        .unwrap();
+
+    fs::write("person.html", resp.text().await.unwrap())
+        .await
+        .unwrap();
+
+    //TODO: PARSE person info
+
+    let mut undo = HashMap::from(post::LIST_UNDO);
+
+    // let mut undo = HashMap::from(post::CLICK_CLIENTS_LIST);
+    // undo.insert(
+    //     "panelMenuStatemainMenuSubView:mainMenuForm:selectedClientGroupMenu",
+    //     "opened",
+    // );
+
+    // undo.insert(
+    //     "panelMenuStatemainMenuSubView:mainMenuForm:cardGroupMenu",
+    //     "opened",
+    // );
+
+    // undo.insert(
+    //     "panelMenuStatemainMenuSubView:mainMenuForm:selectedCardGroupMenu",
+    //     "opened",
+    // );
+
+    //UNDO
+    let resp = client.post(SITE_URL).form(&undo).send().await.unwrap();
+
+    fs::write("undo.html", resp.text().await.unwrap())
+        .await
+        .unwrap();
+
+    "complete".to_string()
 }
