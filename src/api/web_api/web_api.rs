@@ -35,7 +35,7 @@ impl Cards {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct AccessData {
     pub login: String,
     pub password: String,
@@ -83,6 +83,7 @@ pub async fn login(
     Extension(clients): Extension<Clients>,
     extract::Json(payload): extract::Json<AccessData>,
 ) -> String {
+    dbg!(&payload);
     let web_client = create_client_or_send_exist(&payload.login, &clients).await;
 
     if web_client.cookie.is_empty().not() {

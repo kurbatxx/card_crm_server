@@ -1,5 +1,6 @@
 @server_url = http://127.0.0.1:3333
-@name = 
+@login = {{$dotenv LOGIN}}
+@pass = {{$dotenv PASSWORD}}
 
 GET {{server_url}} HTTP/1.1
 
@@ -12,19 +13,19 @@ POST {{server_url}}/login HTTP/1.1
 content-type: application/json
 
 {
-    "login": "",
-    "password": "" 
+    "login": "{{login}}",
+    "password": "{{pass}}"
 }
 
 ###
 
-GET {{server_url}}/organizations?login={{name}} HTTP/1.1
+GET {{server_url}}/organizations?login={{login}} HTTP/1.1
 
 ###
-POST {{server_url}}/logout?login={{name}} HTTP/1.1
+POST {{server_url}}/logout?login={{login}} HTTP/1.1
 
 ###
-POST {{server_url}}/search?login={{name}} HTTP/1.1
+POST {{server_url}}/search?login={{login}} HTTP/1.1
 content-type: application/json
 
 {
@@ -35,7 +36,7 @@ content-type: application/json
 }
 
 ### //879
-POST {{server_url}}/download_all?login={{name}} HTTP/1.1
+POST {{server_url}}/download_all?login={{login}} HTTP/1.1
 content-type: application/json
 
 {
@@ -46,8 +47,8 @@ content-type: application/json
 
 ###
 @page_num = 2
-POST {{server_url}}/search_page?login={{name}}&page_number={{page_num}} HTTP/1.1
+POST {{server_url}}/search_page?login={{login}}&page_number={{page_num}} HTTP/1.1
 
 ###
 @num = 5
-POST {{server_url}}/person_info?login={{name}}&num={{num}} HTTP/1.1
+POST {{server_url}}/person_info?login={{login}}&num={{num}} HTTP/1.1
