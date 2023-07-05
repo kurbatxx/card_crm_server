@@ -40,8 +40,8 @@ POST {{server_url}}/download_all?login={{login}} HTTP/1.1
 content-type: application/json
 
 {
-    "org_id": 859, 
-    "cards": 2,
+    "org_id": 906, 
+    "cards": 0,
     "show_deleted" : false
 }
 

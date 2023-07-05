@@ -19,6 +19,8 @@ use crate::Clients;
 const SITE_URL: &str = "https://bilim.integro.kz:8181/processor/back-office/index.faces";
 const AUTH_URL: &str = "https://bilim.integro.kz:8181/processor/back-office/j_security_check";
 
+const TEMP: &str = "temp";
+
 enum Cards {
     NoSelected,
     WithCards,
@@ -83,6 +85,10 @@ pub async fn login(
     Extension(clients): Extension<Clients>,
     extract::Json(payload): extract::Json<AccessData>,
 ) -> String {
+    if cfg!(debug_assertions) {
+        fs::create_dir_all("./".to_owned() + TEMP).await.unwrap();
+    }
+
     dbg!(&payload);
     let web_client = create_client_or_send_exist(&payload.login, &clients).await;
 
@@ -210,7 +216,7 @@ pub async fn get_organizations(
 
     let client = &web_client.client;
 
-    let resp = client
+    let _resp = client
         .post(SITE_URL)
         .form(&HashMap::from(post::ORG_MODAL))
         .send()
@@ -390,9 +396,11 @@ pub async fn init_search(
         .await
         .unwrap();
 
-    fs::write("1_clear_button.html", resp.text().await.unwrap())
-        .await
-        .unwrap();
+    if cfg!(debug_assertions) {
+        fs::write("1_clear_button.html", resp.text().await.unwrap())
+            .await
+            .unwrap();
+    }
 
     let mut search_form = HashMap::from(post::SEARCH_FORM);
 
@@ -434,7 +442,11 @@ pub async fn init_search(
         .unwrap();
 
     let res = resp.text().await.unwrap();
-    fs::write("6_search_submit.html", &res).await.unwrap();
+    if cfg!(debug_assertions) {
+        fs::write(TEMP.to_owned() + "/6_search_submit.html", &res)
+            .await
+            .unwrap();
+    }
 
     let org_client_page = res;
     let (org_clients, next_page_exist): (Vec<OrgClient>, bool) =
@@ -703,9 +715,14 @@ pub async fn download_all(
         .await
         .unwrap();
 
-    fs::write("1_clear_button.html", resp.text().await.unwrap())
+    if cfg!(debug_assertions) {
+        fs::write(
+            TEMP.to_owned() + "/1_clear_button.html",
+            resp.text().await.unwrap(),
+        )
         .await
         .unwrap();
+    }
 
     let mut search_form = HashMap::from(post::SEARCH_FORM);
 
@@ -729,7 +746,11 @@ pub async fn download_all(
         .unwrap();
 
     let mut res = resp.text().await.unwrap();
-    fs::write("6_search_submit.html", &res).await.unwrap();
+    if cfg!(debug_assertions) {
+        fs::write(TEMP.to_owned() + "/6_search_submit.html", &res)
+            .await
+            .unwrap();
+    }
 
     //Первая страница с фильтром..
 
@@ -778,9 +799,14 @@ async fn set_org_filter<'a>(
 
     search_form.remove(post::OPEN_ORG_SEARCH_KEY);
 
-    fs::write("2_open_org_selector.html", resp.text().await.unwrap())
+    if cfg!(debug_assertions) {
+        fs::write(
+            TEMP.to_owned() + "/2_open_org_selector.html",
+            resp.text().await.unwrap(),
+        )
         .await
         .unwrap();
+    }
 
     let mut set_filter = HashMap::from(post::ORG_FILTER);
     set_filter
@@ -794,9 +820,14 @@ async fn set_org_filter<'a>(
         .await
         .unwrap();
 
-    fs::write("3_set_filter.html", resp.text().await.unwrap())
+    if cfg!(debug_assertions) {
+        fs::write(
+            TEMP.to_owned() + "/3_set_filter.html",
+            resp.text().await.unwrap(),
+        )
         .await
         .unwrap();
+    }
 
     set_filter.remove(post::ORG_MODAL_FILTER_KEY);
     set_filter.remove(post::AJAX_EVENTS_COUNT_KEY);
@@ -810,9 +841,14 @@ async fn set_org_filter<'a>(
         .await
         .unwrap();
 
-    fs::write("4_click_table_element.html", resp.text().await.unwrap())
+    if cfg!(debug_assertions) {
+        fs::write(
+            TEMP.to_owned() + "/4_click_table_element.html",
+            resp.text().await.unwrap(),
+        )
         .await
         .unwrap();
+    }
 
     set_filter.remove(post::FIRST_TABLE_ROW_KEY);
     set_filter.insert(post::SUBMIT_SELECTED_ROW, post::SUBMIT_SELECTED_ROW);
@@ -824,9 +860,14 @@ async fn set_org_filter<'a>(
         .await
         .unwrap();
 
-    fs::write("5_submit_selected_row.html", resp.text().await.unwrap())
+    if cfg!(debug_assertions) {
+        fs::write(
+            TEMP.to_owned() + "/5_submit_selected_row.html",
+            resp.text().await.unwrap(),
+        )
         .await
         .unwrap();
+    }
 
     search_form.insert(post::AJAX_EVENTS_COUNT_KEY, "1");
     search_form.insert(post::SUBMIT_SEARCH_KEY, post::SUBMIT_SEARCH_KEY);
@@ -867,9 +908,11 @@ pub async fn person_info(
         .await
         .unwrap();
 
-    fs::write("person.html", resp.text().await.unwrap())
-        .await
-        .unwrap();
+    if cfg!(debug_assertions) {
+        fs::write("person.html", resp.text().await.unwrap())
+            .await
+            .unwrap();
+    }
 
     //TODO: PARSE person info
 
@@ -893,10 +936,10 @@ pub async fn person_info(
 
     //UNDO
     let resp = client.post(SITE_URL).form(&undo).send().await.unwrap();
-
-    fs::write("undo.html", resp.text().await.unwrap())
-        .await
-        .unwrap();
-
+    if cfg!(debug_assertions) {
+        fs::write("undo.html", resp.text().await.unwrap())
+            .await
+            .unwrap();
+    }
     "complete".to_string()
 }

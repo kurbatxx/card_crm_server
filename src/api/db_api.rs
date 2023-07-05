@@ -1,9 +1,9 @@
 use axum::extract::State;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sqlx::{Pool, Postgres};
+use sqlx::{FromRow, Pool, Postgres};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, FromRow)]
 struct WebDevice {
     web_device_id: i32,
     web_device_name: String,
@@ -13,9 +13,11 @@ struct WebDevice {
 }
 
 pub async fn web_devices(State(pool): State<Pool<Postgres>>) -> String {
-    let web_devices = sqlx::query_as!(
-        WebDevice,
-        r#"SELECT web_device_id, web_device_name, visible, colored, icon FROM web_device"#
+    let web_devices = sqlx::query_as::<_, WebDevice>(
+        r#"
+        SELECT web_device_id, web_device_name, visible, colored, icon 
+        FROM web_device
+        "#,
     )
     .fetch_all(&pool)
     .await
